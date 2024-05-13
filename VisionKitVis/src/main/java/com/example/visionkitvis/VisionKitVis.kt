@@ -36,8 +36,6 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
         90.0
     )
     var mousePosition: Point2D = Point2D(0.0, 0.0)
-    var pitch: Double = 0.0
-    var yaw: Double = 0.0
 
     private val render: () -> Unit = {
         val g = canvas.bufferStrat.drawGraphics as Graphics2D
@@ -203,25 +201,19 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
 
             override fun mouseMoved(e: MouseEvent) {
                 val mouseDelta = Point2D(
-                    (e.x.toDouble() - mousePosition.x)/canvas.width,
-                    (e.y.toDouble() - mousePosition.y)/canvas.height
+                    (e.x.toDouble() - mousePosition.x) / canvas.width,
+                    (e.y.toDouble() - mousePosition.y) / canvas.height
                 )
-                robot.mouseMove(windowFrame.x + canvas.width/2, windowFrame.y + canvas.height/2)
-                mousePosition = Point2D(canvas.mousePosition.x.toDouble(), canvas.mousePosition.y.toDouble())
+                robot.mouseMove(windowFrame.x + canvas.width / 2, windowFrame.y + canvas.height / 2)
+                mousePosition =
+                    Point2D(canvas.mousePosition.x.toDouble(), canvas.mousePosition.y.toDouble())
 
-                pitch += mouseDelta.y
-                yaw += -mouseDelta.x
+                camera.direction = camera.direction.rotateAround(camera.up, mouseDelta.x)
 
-                camera.direction = Rotation3D(
-                    cos(pitch)*sin(yaw),
-                    cos(pitch)*cos(yaw),
-                    sin(pitch)
-                )
-                camera.up = Rotation3D(
-                    cos(pitch+Math.PI/2)*sin(yaw),
-                    cos(pitch+Math.PI/2)*cos(yaw),
-                    sin(pitch+Math.PI/2)
-                )
+                val axis = camera.direction.cross(camera.up)
+                camera.direction = camera.direction.rotateAround(axis, mouseDelta.y)
+                camera.up = camera.up.rotateAround(axis, mouseDelta.y)
+
             }
         })
 
@@ -241,9 +233,6 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
                         camera.position = Point3D(0.0, 0.0, 0.0)
                         camera.direction = Rotation3D(0.0, 1.0, 0.0)
                         camera.up = Rotation3D(0.0, 0.0, 1.0)
-
-                        pitch = 0.0
-                        yaw = 0.0
                     }
                 }
             }
