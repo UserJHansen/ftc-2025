@@ -8,9 +8,9 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.roadrunner.geometry.Pose2d;
-import com.acmerobotics.roadrunner.util.NanoClock;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -37,6 +37,7 @@ import java.util.List;
 public class AutomaticFeedforwardTuner extends LinearOpMode {
     public static double MAX_POWER = 0.7;
     public static double DISTANCE = 100; // in
+    private ElapsedTime timer;
 
     @Override
     public void runOpMode() throws InterruptedException {
@@ -48,8 +49,6 @@ public class AutomaticFeedforwardTuner extends LinearOpMode {
         Telemetry telemetry = new MultipleTelemetry(this.telemetry, FtcDashboard.getInstance().getTelemetry());
 
         SampleMecanumDrive drive = new SampleMecanumDrive(hardwareMap);
-
-        NanoClock clock = NanoClock.system();
 
         telemetry.addLine("Press play to begin the feedforward tuning routine");
         telemetry.update();
@@ -102,18 +101,22 @@ public class AutomaticFeedforwardTuner extends LinearOpMode {
         double accel = (finalVel * finalVel) / (2.0 * DISTANCE);
         double rampTime = Math.sqrt(2.0 * DISTANCE / accel);
 
+        telemetry.addData("max", maxVel);
+        telemetry.addData("final", finalVel);
+        telemetry.addData("accel", accel);
+        telemetry.addData("rampTime", rampTime);
+        telemetry.update();
+
         List<Double> timeSamples = new ArrayList<>();
         List<Double> positionSamples = new ArrayList<>();
         List<Double> powerSamples = new ArrayList<>();
 
         drive.setPoseEstimate(new Pose2d());
 
-        double startTime = clock.seconds();
-        while (!isStopRequested()) {
-            double elapsedTime = clock.seconds() - startTime;
-            if (elapsedTime > rampTime) {
-                break;
-            }
+        timer = new ElapsedTime();
+        while (!isStopRequested() && timer.seconds() < rampTime) {
+            double elapsedTime = timer.seconds();
+
             double vel = accel * elapsedTime;
             double power = vel / maxVel;
 
@@ -187,12 +190,9 @@ public class AutomaticFeedforwardTuner extends LinearOpMode {
             drive.setPoseEstimate(new Pose2d());
             drive.setDrivePower(new Pose2d(MAX_POWER, 0.0, 0.0));
 
-            startTime = clock.seconds();
-            while (!isStopRequested()) {
-                double elapsedTime = clock.seconds() - startTime;
-                if (elapsedTime > maxPowerTime) {
-                    break;
-                }
+            timer = new ElapsedTime();
+            while (!isStopRequested() && timer.seconds() < maxPowerTime) {
+                double elapsedTime = timer.seconds();
 
                 timeSamples.add(elapsedTime);
                 positionSamples.add(drive.getPoseEstimate().getX());

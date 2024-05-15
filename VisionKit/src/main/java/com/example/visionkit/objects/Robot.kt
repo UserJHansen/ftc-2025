@@ -1,11 +1,12 @@
 package com.example.visionkit.objects
 
+import com.example.visionkit.Camera
 import com.example.visionkit.Label
 import com.example.visionkit.Line
 import com.example.visionkit.Point3D
 import com.example.visionkit.Renderable
 
-class Robot() : Renderable {
+class Robot(val cameras: List<Camera>) : Renderable {
     override val labels = listOf(Label("Robot", Point3D(0.0, 0.0, 0.0)))
     private val size: Double = 0.35
 

@@ -53,11 +53,6 @@ import java.util.List;
 public class DriveVelocityPIDTuner extends LinearOpMode {
     public static double DISTANCE = 72; // in
 
-    enum Mode {
-        DRIVER_MODE,
-        TUNING_MODE
-    }
-
     private static MotionProfile generateProfile(boolean movingForward) {
         MotionState start = new MotionState(movingForward ? 0 : DISTANCE, 0, 0, 0);
         MotionState goal = new MotionState(movingForward ? DISTANCE : 0, 0, 0, 0);
@@ -167,5 +162,10 @@ public class DriveVelocityPIDTuner extends LinearOpMode {
 
             telemetry.update();
         }
+    }
+
+    enum Mode {
+        DRIVER_MODE,
+        TUNING_MODE
     }
 }
