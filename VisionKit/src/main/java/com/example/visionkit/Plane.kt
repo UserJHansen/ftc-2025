@@ -31,9 +31,8 @@ class Plane {
         return abs((p - this.origin).dot(this.normal))
     }
 
-    fun project(p: Point3D): Point3D {
-        val v = p - this.origin
-        return p - this.normal * v.dot(this.normal)
+    fun map(p: Point3D): Point3D {
+        return this.origin + this.sideBase * p.x + this.normal * p.y + this.sideBase.cross(this.normal) * p.z
     }
 
     fun map(p: Point2D): Point3D {
@@ -42,5 +41,15 @@ class Plane {
 
     override fun toString(): String {
         return "Plane($origin, $normal)"
+    }
+
+    fun <T> map(p1: Point<T>): Point3D {
+        return if (p1 is Point2D) {
+            this.map(p1)
+        } else if (p1 is Point3D) {
+            this.map(p1)
+        } else {
+            throw IllegalArgumentException("Point type not supported")
+        }
     }
 }

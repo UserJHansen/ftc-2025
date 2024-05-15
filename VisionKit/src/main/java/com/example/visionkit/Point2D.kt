@@ -6,9 +6,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class Point2D(var x: Double, var y: Double) {
+class Point2D(var x: Double, var y: Double) : Point<Point2D> {
 
-    var length: Double
+    override var length: Double
         get() = sqrt(this.x * this.x + this.y * this.y)
         set(value) {
             val currentLength = this.length
@@ -26,11 +26,11 @@ class Point2D(var x: Double, var y: Double) {
             this.y = sin(value) * currentLength
         }
 
-    operator fun plus(p: Point2D): Point2D {
+    override operator fun plus(p: Point2D): Point2D {
         return Point2D(this.x + p.x, this.y + p.y)
     }
 
-    operator fun minus(p: Point2D): Point2D {
+    override operator fun minus(p: Point2D): Point2D {
         return Point2D(this.x - p.x, this.y - p.y)
     }
 
@@ -78,12 +78,12 @@ class Point2D(var x: Double, var y: Double) {
         this.length = 1.0
     }
 
-    fun dot(p: Point2D): Double {
+    override fun dot(p: Point2D): Double {
         return this.x * p.x + this.y * p.y
     }
 
-    fun cross(p: Point2D): Double {
-        return this.x * p.y - this.y * p.x
+    override fun cross(p: Point2D): Point3D {
+        return Point3D(0.0, 0.0, this.x * p.y - this.y * p.x)
     }
 
     fun rotate(angle: Double): Point2D {

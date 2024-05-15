@@ -2,9 +2,14 @@ package com.example.visionkitvis
 
 import com.example.visionkit.Camera
 import com.example.visionkit.Line
+import com.example.visionkit.Plane
 import com.example.visionkit.Point2D
 import com.example.visionkit.Point3D
+import com.example.visionkit.Renderable
 import com.example.visionkit.Rotation3D
+import com.example.visionkit.objects.Box
+import com.example.visionkit.objects.FieldPerimeter
+import com.example.visionkit.objects.PlaneRenderer
 import com.example.visionkitvis.ui.WindowFrame
 import com.example.visionkitvis.ui.colorscheme.ColorManager
 import java.awt.Color
@@ -17,7 +22,6 @@ import java.awt.event.KeyListener
 import java.awt.event.MouseEvent
 import java.awt.event.MouseMotionListener
 import javax.swing.UIManager
-import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -32,8 +36,10 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
     val camera = Camera(
         Point3D(0.0, 0.0, 0.0),
         Rotation3D(0.0, 1.0, 0.0),
-        Rotation3D(0.0,0.0,1.0),
-        90.0
+        Rotation3D(0.0, 0.0, 1.0),
+        90.0,
+        911.2968158 * 2 / 1920,
+        513.6169402 * 2 / 1080
     )
     var mousePosition: Point2D = Point2D(0.0, 0.0)
 
@@ -60,116 +66,52 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
             (2*screenRadius).toInt()
         )
 
-        val fx = 911.2968158*2/1920
-        val fy = 513.6169402*2/1080
-
-        fun convertToScreenCoords(point: Point3D): Point2D {
-            var p = point - camera.position
-            p = Point3D(
-                p.dot(camera.direction),
-                p.dot(camera.up.cross(camera.direction)),
-                p.dot(camera.up)
-            )
-
-            p.y = atan(p.y/p.x)*Math.PI*fx
-            p.z = atan(p.z/p.x)*Math.PI*fy
-
-            return Point2D(
-                (screenCenter.x + screenRadius*p.y),
-                (screenCenter.y + screenRadius*p.z)
-            )
-        }
-
         // Draw fps
         g.font = Font("Sans", Font.BOLD, 20)
         g.color = Color.BLUE
 
         var screenLine = 0
         fun drawLine(text: String) {
-            g.drawString(text, (screenCenter.x-screenRadius).toFloat(), (screenCenter.y-screenRadius).toFloat()+20+20*screenLine)
+            g.drawString(
+                text,
+                (screenCenter.x - screenRadius).toFloat(),
+                (screenCenter.y - screenRadius).toFloat() + 20 + 20 * screenLine
+            )
             screenLine++
         }
 
         drawLine("FPS: %.1f".format(loopManager.fps))
         drawLine("Camera: %s, mag: ".format(camera.position))
         drawLine("Camera: %s".format(camera.direction))
-        drawLine("Camera: %s".format(camera.up))
         drawLine("Box: %s".format((objects[0] as Box).position))
         drawLine("Direction dot: %s".format(camera.direction.dot(camera.up)))
 
-        val lines = mutableListOf<Line>()
-        val labels = mutableListOf<Label>()
-
-        for (obj in objects) {
-            lines.addAll(obj.render(camera))
-            labels.add(obj.label)
-        }
-
-        labels.add(
-            Label(
-                "Circle",
-                Point3D(0.0, 0.0, 0.0)
+        camera.render(objects).forEach {
+            g.color = it.colour
+            g.drawLine(
+                (screenCenter.x + screenRadius * it.p1.x).toInt(),
+                (screenCenter.y + screenRadius * it.p1.y).toInt(),
+                (screenCenter.x + screenRadius * it.p2.x).toInt(),
+                (screenCenter.y + screenRadius * it.p2.y).toInt()
             )
-        )
-
-        val circle = mutableListOf<Line>()
-        for (i in 0..100) {
-            val startAngle = i.toDouble()/100.0*2.0*Math.PI
-            val finishAngle = (i+1).toDouble()/100.0*2.0*Math.PI
-            val p1 = Point3D(cos(startAngle), sin(startAngle), 0.0)
-            val p2 = Point3D(cos(finishAngle), sin(finishAngle), 0.0)
-            circle.add(Line(p1, p2))
         }
 
-        lines.addAll(circle)
+        val labels = objects.flatMap { it.labels }
 
         for (label in labels) {
-            val position = label.position - camera.position
+            val position = label.position
 
-            if (position.dot(camera.direction) < 0.0) {
+            if ((position - camera.position).dot(camera.direction) < 0.0) {
                 continue
             }
 
-            val screenPosition = convertToScreenCoords(label.position)
+            val screenPosition = camera.convertToScreenCoords(label.position)
             g.color = Color.RED
 
             g.drawString(
                 label.text,
-                screenPosition.x.toInt(),
-                screenPosition.y.toInt()
-            )
-        }
-
-        for (line in lines) {
-            val p1 = line.p1 - camera.position
-            val p2 = line.p2 - camera.position
-
-//            Convert the 3d points onto the camera, using the camera's position, direction and fov
-
-            if (p1.dot(camera.direction) < 0.0 && p2.dot(camera.direction) < 0.0) {
-                g.color = Color.RED
-                continue
-            } else if (p1.angleBetween(p2) > Math.toRadians(camera.fov)) {
-                g.color = Color.GREEN
-                continue
-            } else if (p1.angleBetween(camera.direction) > Math.toRadians(camera.fov)) {
-                g.color = Color.BLUE
-                continue
-            } else if (p2.angleBetween(camera.direction) > Math.toRadians(camera.fov)) {
-                g.color = Color.PINK
-                continue
-            } else {
-                g.color = Color.BLACK
-            }
-
-            val screen_p1 = convertToScreenCoords(line.p1)
-            val screen_p2 = convertToScreenCoords(line.p2)
-
-            g.drawLine(
-                screen_p1.x.toInt(),
-                screen_p1.y.toInt(),
-                screen_p2.x.toInt(),
-                screen_p2.y.toInt()
+                (screenCenter.x + screenRadius * screenPosition.x).toInt(),
+                (screenCenter.y + screenRadius * screenPosition.y).toInt()
             )
         }
 
@@ -210,7 +152,7 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
 
                 camera.direction = camera.direction.rotateAround(camera.up, mouseDelta.x)
 
-                val axis = camera.direction.cross(camera.up)
+                val axis = camera.up.cross(camera.direction)
                 camera.direction = camera.direction.rotateAround(axis, mouseDelta.y)
                 camera.up = camera.up.rotateAround(axis, mouseDelta.y)
 
@@ -225,8 +167,8 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
                 when (e.keyCode) {
                     KeyEvent.VK_W -> camera.position += camera.direction * moveSpeed
                     KeyEvent.VK_S -> camera.position -= camera.direction * moveSpeed
-                    KeyEvent.VK_A -> camera.position += camera.direction.cross(camera.up) * moveSpeed
-                    KeyEvent.VK_D -> camera.position -= camera.direction.cross(camera.up) * moveSpeed
+                    KeyEvent.VK_A -> camera.position -= camera.up.cross(camera.direction) * moveSpeed
+                    KeyEvent.VK_D -> camera.position += camera.up.cross(camera.direction) * moveSpeed
                     KeyEvent.VK_Q -> camera.position += camera.up * moveSpeed
                     KeyEvent.VK_E -> camera.position -= camera.up * moveSpeed
                     KeyEvent.VK_R -> {
@@ -244,7 +186,45 @@ open class VisionKitVis(windowSize: Int, fps: Int = 60) {
     fun start(): VisionKitVis {
         windowFrame.isVisible = true
 
-        objects.add(Box())
+        objects.add(Box(Point3D(0.0, 0.0, 0.0)))
+
+        objects.add(
+            PlaneRenderer(
+                Plane(
+                    Point3D(0.0, 10.0, 0.0),
+                    Rotation3D(0.0, 0.0, 1.0),
+                    Rotation3D(0.0, 1.0, 0.0)
+                ),
+                listOf(
+                    Line(Point2D(-1.0, -1.0), Point2D(1.0, -1.0)),
+                    Line(Point2D(-1.0, 1.0), Point2D(1.0, 1.0)),
+                    Line(Point2D(-1.0, -1.0), Point2D(-1.0, 1.0)),
+                    Line(Point2D(1.0, -1.0), Point2D(1.0, 1.0))
+                )
+            )
+        )
+
+        objects.add(
+            PlaneRenderer(
+                Plane(
+                    Point3D(0.0, -10.0, 0.0),
+                    Rotation3D(0.0, 0.0, 1.0),
+                    Rotation3D(0.0, 1.0, 0.0)
+                ),
+                listOf(
+                    Line(Point2D(-1.0, 1.0), Point2D(-1.0, 2.0)),
+                    Line(Point2D(1.0, 1.0), Point2D(1.0, 2.0)),
+
+//                Smile!
+                    Line(Point2D(-1.0, -1.0), Point2D(-0.5, -1.5)),
+                    Line(Point2D(-0.5, -1.5), Point2D(0.5, -1.5)),
+                    Line(Point2D(0.5, -1.5), Point2D(1.0, -1.0))
+                ),
+                "Smile!"
+            )
+        )
+
+        objects.add(FieldPerimeter())
 
         loopManager.start()
 

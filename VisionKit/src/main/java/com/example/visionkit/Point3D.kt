@@ -6,18 +6,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-open class Point3D {
-    var x: Double = 0.0
-    var y: Double = 0.0
-    var z: Double = 0.0
+open class Point3D(var x: Double, var y: Double, var z: Double) : Point<Point3D> {
 
-    constructor(x: Double, y: Double, z: Double) {
-        this.x = x
-        this.y = y
-        this.z = z
-    }
-
-    var length: Double
+    override var length: Double
         get() = sqrt(this.x * this.x + this.y * this.y + this.z * this.z)
         set(value) {
             val currentLength = this.length
@@ -71,11 +62,11 @@ open class Point3D {
             this.z = cos(value) * currentLength
         }
 
-    operator fun plus(p: Point3D): Point3D {
+    override operator fun plus(p: Point3D): Point3D {
         return Point3D(this.x + p.x, this.y + p.y, this.z + p.z)
     }
 
-    operator fun minus(p: Point3D): Point3D {
+    override operator fun minus(p: Point3D): Point3D {
         return Point3D(this.x - p.x, this.y - p.y, this.z - p.z)
     }
 
@@ -115,11 +106,11 @@ open class Point3D {
         this.length = 1.0
     }
 
-    fun dot(p: Point3D): Double {
+    override fun dot(p: Point3D): Double {
         return this.x * p.x + this.y * p.y + this.z * p.z
     }
 
-    fun cross(p: Point3D): Point3D {
+    override fun cross(p: Point3D): Point3D {
         return Point3D(
             this.y * p.z - this.z * p.y,
             this.z * p.x - this.x * p.z,
