@@ -25,7 +25,7 @@ public class LEDStrip {
     public void update() {
         if (timeout.hasExpired()) {
             timeout.reset();
-            if (colours.size() > 0) {
+            if (!colours.isEmpty()) {
                 if (index < colours.size() - 1) {
                     driver.setPattern(colours.get(++index));
                 } else {

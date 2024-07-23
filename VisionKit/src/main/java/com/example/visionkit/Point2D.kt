@@ -66,7 +66,7 @@ class Point2D(var x: Double, var y: Double) : Point<Point2D> {
         return Point2D(-this.x, -this.y)
     }
 
-    fun distanceTo(p: Point2D): Double {
+    override fun distance(p: Point2D): Double {
         return (this - p).length
     }
 

@@ -37,7 +37,13 @@ public class CameraPoseAdjust {
     }
 
     public boolean update(boolean overrideDistance) {
-        Vector2d vel = robot.getPoseVelocity().vec();
+        Vector2d vel;
+        try {
+            vel = robot.getPoseVelocity().vec();
+        } catch (Exception e) {
+            Logging.LOG("CAMERAPOSE", "DISABLED_NO_VELOCITY");
+            return false;
+        }
         if (Math.hypot(vel.getX(), vel.getY()) < ROBOT_SPEED_CUTOFF && robot.getExternalHeadingVelocity() < ROBOT_ROTATION_CUTOFF) {
             List<Pose2d> possiblePoses = new ArrayList<>();
             List<Double> weights = new ArrayList<>();

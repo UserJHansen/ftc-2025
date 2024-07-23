@@ -94,7 +94,7 @@ open class Point3D(var x: Double, var y: Double, var z: Double) : Point<Point3D>
         return Point3D(-this.x, -this.y, -this.z)
     }
 
-    fun distanceTo(p: Point3D): Double {
+    override fun distance(p: Point3D): Double {
         return (this - p).length
     }
 

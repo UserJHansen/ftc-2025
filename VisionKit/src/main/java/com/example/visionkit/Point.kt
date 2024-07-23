@@ -9,4 +9,5 @@ interface Point<T> {
 
     fun cross(p: T): Point3D
     fun dot(p: T): Double
+    fun distance(p2: T): Double
 }

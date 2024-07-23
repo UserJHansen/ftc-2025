@@ -4,11 +4,12 @@ import androidx.annotation.NonNull;
 
 import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.localization.TwoTrackingWheelLocalizer;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.GyroSensor;
-import com.qualcomm.robotcore.hardware.Gyroscope;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.IMU;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.util.Encoder;
 
 import java.util.Arrays;
@@ -28,7 +29,7 @@ public class GyroLocalizer extends TwoTrackingWheelLocalizer {
 
     private final Encoder leftEncoder;
     private final Encoder frontEncoder;
-    private final GyroSensor imu;
+    private final IMU imu;
 
     private final List<Integer> lastEncPositions;
     private final List<Integer> lastEncVels;
@@ -37,16 +38,19 @@ public class GyroLocalizer extends TwoTrackingWheelLocalizer {
     public GyroLocalizer(HardwareMap hardwareMap, List<Integer> lastTrackingEncPositions, List<Integer> lastTrackingEncVels) {
         super(Arrays.asList(
                 new Pose2d(X_OFFSET, LATERAL_DISTANCE / 2, 0), // left
-                new Pose2d(X_OFFSET, -LATERAL_DISTANCE / 2, 0), // right
                 new Pose2d(X_OFFSET + FORWARD_OFFSET, 0, Math.toRadians(90)) // front
         ));
 
         lastEncPositions = lastTrackingEncPositions;
         lastEncVels = lastTrackingEncVels;
 
-        leftEncoder = new Encoder(hardwareMap.get(DcMotorEx.class, "leftRear"));
-        frontEncoder = new Encoder(hardwareMap.get(DcMotorEx.class, "rightRear"));
-        imu = hardwareMap.get(GyroSensor.class, "imu");
+        leftEncoder = new Encoder(hardwareMap.get(DcMotorEx.class, "intake"));
+        frontEncoder = new Encoder(hardwareMap.get(DcMotorEx.class, "encoder"));
+        imu = hardwareMap.get(IMU.class, "imu");
+
+        imu.initialize(
+                new IMU.Parameters(new RevHubOrientationOnRobot(RevHubOrientationOnRobot.LogoFacingDirection.LEFT, RevHubOrientationOnRobot.UsbFacingDirection.UP))
+        );
 
         // TODO: reverse any encoders using Encoder.setDirection(Encoder.Direction.REVERSE)
         leftEncoder.setDirection(Encoder.Direction.FORWARD);
@@ -91,6 +95,6 @@ public class GyroLocalizer extends TwoTrackingWheelLocalizer {
 
     @Override
     public double getHeading() {
-        return Math.toRadians(imu.getHeading());
+        return imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
     }
 }

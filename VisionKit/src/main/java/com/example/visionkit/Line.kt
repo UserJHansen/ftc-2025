@@ -3,6 +3,7 @@ package com.example.visionkit
 import java.awt.Color
 
 class Line<T : Point<T>>(var p1: T, var p2: T, var colour: Color = Color.BLACK) {
+    var length: Double = p1.distance(p2)
 
     fun distance(p: T): Double {
         val v1 = p - this.p1
