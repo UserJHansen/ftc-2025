@@ -16,27 +16,22 @@ public class LiftServoTester extends LinearOpMode {
     //    L
     public static double elbowLmax = 0; // DONE
     public static double elbowLmin = 0.93; // DONE
-    //    R
-    public static double elbowRmax = 1; // DONE
-    public static double elbowRmin = 0.07; // DONE
     //    L
     public static double wristLmax = 0;
     public static double wristLmin = 0.5;
-    //    R
-    public static double wristRmax = 1;
-    public static double wristRmin = 0;
     public static double clawmax = 1.0; // DONE
     public static double clawmin = 0.0; // DONE
+    public static double flapmax = 1.0; // DONE
+    public static double flapmin = 0.0; // DONE
 
 
     @Override
     public void runOpMode() throws InterruptedException {
         Button out = new Button(true);
-        Servo elbowL = hardwareMap.get(Servo.class, "elbowL");
-        Servo elbowR = hardwareMap.get(Servo.class, "elbowR");
-        Servo wristL = hardwareMap.get(Servo.class, "wristL");
-        Servo wristR = hardwareMap.get(Servo.class, "wristR");
+        Servo elbowL = hardwareMap.get(Servo.class, "elbow");
+        Servo wristL = hardwareMap.get(Servo.class, "wrist");
         Servo claw = hardwareMap.get(Servo.class, "claw");
+        Servo flap = hardwareMap.get(Servo.class, "flap");
 
         Logging.telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
@@ -50,17 +45,18 @@ public class LiftServoTester extends LinearOpMode {
             out.update(gamepad1.back);
             if (out.val) {
                 if (gamepad1.a) elbowL.setPosition(elbowLmax);
-                if (gamepad1.b) elbowR.setPosition(elbowRmax);
                 if (gamepad1.x) wristL.setPosition(wristLmax);
-                if (gamepad1.y) wristR.setPosition(wristRmax);
                 if (gamepad1.dpad_down) claw.setPosition(clawmax);
+                if (gamepad1.dpad_up) flap.setPosition(flapmax);
             } else {
                 if (gamepad1.a) elbowL.setPosition(elbowLmin);
-                if (gamepad1.b) elbowR.setPosition(elbowRmin);
                 if (gamepad1.x) wristL.setPosition(wristLmin);
-                if (gamepad1.y) wristR.setPosition(wristRmin);
                 if (gamepad1.dpad_down) claw.setPosition(clawmin);
+                if (gamepad1.dpad_up) flap.setPosition(flapmin);
             }
+
+            Logging.LOG("Out State: ", out.val);
+            Logging.update();
         }
     }
 }

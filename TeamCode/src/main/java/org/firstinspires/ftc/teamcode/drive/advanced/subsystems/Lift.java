@@ -11,8 +11,10 @@ import org.firstinspires.ftc.teamcode.drive.DriveConstants;
 
 @Config
 public class Lift {
-    public static double liftBase = 2.42;
-    public static double ticksPerInch = 186.6379310344;
+    public static double liftBase = 6;
+    public static double ticksPerInch = 115;
+
+    public static int hardLimit = 1600;
 
     public DcMotorEx liftMotor;
     public double targetHeight;
@@ -32,6 +34,7 @@ public class Lift {
 
     public void setHeight(double height) {
         targetHeight = height;
-        liftMotor.setTargetPosition((int) (LocationMath.calculateLiftExtension(liftBase, Math.toRadians(RobotParams.liftAngleVertical), height) * ticksPerInch));
+        int target = (int) (LocationMath.calculateLiftExtension(liftBase, Math.toRadians(RobotParams.liftAngleVertical), height) * ticksPerInch);
+        liftMotor.setTargetPosition(Math.max(Math.min(target, hardLimit), 0));
     }
 }

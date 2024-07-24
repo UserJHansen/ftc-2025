@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
@@ -26,11 +27,12 @@ public class LiftArmAssembly {
 
     public LiftArmAssembly(HardwareMap hardwareMap) {
         liftL = new Lift(hardwareMap.get(DcMotorEx.class, "liftL"), DcMotor.Direction.FORWARD);
-        liftR = new Lift(hardwareMap.get(DcMotorEx.class, "liftR"), DcMotor.Direction.REVERSE);
-        elbowL = new ServoMultiState(hardwareMap, "elbow", new double[]{0, 0.8, 0.2});
-        wristL = new ServoMultiState(hardwareMap, "wrist", new double[]{0.52, 0, 0.00});
-        claw = new ServoToggle(hardwareMap, "claw", 0.35, 0.7);
-        flap = new ServoToggle(hardwareMap, "flap", 1.0, 0.3);
+        liftR = new Lift(hardwareMap.get(DcMotorEx.class, "liftR"), DcMotor.Direction.FORWARD);
+        elbowL = new ServoMultiState(hardwareMap, "elbow", new double[]{0.15, 0.8, 0.4}); // First value is grabbing, second is deploy to board, third is hold up
+        wristL = new ServoMultiState(hardwareMap, "wrist", new double[]{1, 0.2, 0.00}); // First is grabbing, second is hold to board, third is drop pixel
+        claw = new ServoToggle(hardwareMap, "claw", 0.2, 0.5); // Let go, grip
+        flap = new ServoToggle(hardwareMap, "flap", 0.0, 0.45); // Let go, grip
+        flap.changeTo(true);
     }
 
     public void update(boolean leftPixel, boolean rightPixel) {
@@ -68,7 +70,6 @@ public class LiftArmAssembly {
             }
 
             switch (target) {
-                case Caught:
                 case Waiting:
                     setLiftPosition(Lift.liftBase);
                     setElbowPosition(2);
@@ -76,19 +77,34 @@ public class LiftArmAssembly {
                     claw.changeTo(false);
                     flap.changeTo(true);
                     break;
+                case Caught:
+                case ShieldUp:
+                    setLiftPosition(Lift.liftBase);
+                    setElbowPosition(2);
+                    setWristPosition(false);
+                    claw.changeTo(false);
+                    flap.changeTo(false);
+                    break;
                 case Nab:
                     setLiftPosition(Lift.liftBase);
                     setElbowPosition(false);
                     setWristPosition(false);
                     claw.changeTo(false);
-                    flap.changeTo(true);
+                    flap.changeTo(false);
                     break;
                 case Primed:
                     setLiftPosition(Lift.liftBase);
                     setElbowPosition(false);
                     setWristPosition(false);
                     claw.changeTo(true);
-                    flap.changeTo(true);
+                    flap.changeTo(false);
+                    break;
+                case ArmOut:
+                    setLiftPosition(Lift.liftBase);
+                    setElbowPosition(true);
+                    setWristPosition(false);
+                    claw.changeTo(true);
+                    flap.changeTo(false);
                     break;
                 case LiftRaised:
                     setLiftPosition(liftTargetHeight);
@@ -102,7 +118,7 @@ public class LiftArmAssembly {
                     setElbowPosition(true);
                     setWristPosition(2);
                     claw.changeTo(false);
-                    flap.changeTo(false);
+                    flap.changeTo(true);
                     break;
                 case Return:
                     setLiftPosition(Lift.liftBase);
@@ -149,5 +165,9 @@ public class LiftArmAssembly {
             liftTargetHeight += up * 0.1;
             liftTargetHeight -= down * 0.1;
         }
+    }
+
+    public void reset() {
+        this.target = ArmTarget.Caught;
     }
 }

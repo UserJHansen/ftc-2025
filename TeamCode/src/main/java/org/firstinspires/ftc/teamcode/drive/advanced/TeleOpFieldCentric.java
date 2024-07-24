@@ -36,14 +36,14 @@ public class TeleOpFieldCentric extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         Robot robot = new Robot(hardwareMap, false);
-        Button feildMode = new Button(false);
+        Button fieldMode = new Button(false);
         Button slowMode = new Button(false);
         Button inverted = new Button(false);
         Button forwardState = new Button(false, (none) -> {
             robot.liftArmAssembly.target = robot.liftArmAssembly.target.next;
         });
         Button revertState = new Button(false, (none) -> {
-            robot.liftArmAssembly.target = ArmTarget.Caught;
+            robot.liftArmAssembly.reset();
         });
 
         Logging.telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
@@ -66,7 +66,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                     -gamepad1.left_stick_x
             ).times(slowMode.val ? SlowmodeSpeed : 1);
 
-            if (feildMode.val) {
+            if (fieldMode.val) {
                 input = input.rotated(-poseEstimate.getHeading());
             }
 
@@ -82,7 +82,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
 
             robot.update();
             slowMode.update(gamepad1.b);
-            feildMode.update(gamepad1.x);
+            fieldMode.update(gamepad1.x);
             inverted.update(gamepad1.y);
             forwardState.update(gamepad2.right_bumper);
             revertState.update(gamepad2.left_bumper);
@@ -102,7 +102,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
 
 //            LIGHT STATE HANDLING
             boolean hasLock = robot.adjustedPose;
-            RevBlinkinLedDriver.BlinkinPattern firstBlink = slowMode.val ? RevBlinkinLedDriver.BlinkinPattern.AQUA : feildMode.val ? RevBlinkinLedDriver.BlinkinPattern.VIOLET : hasLock ? RevBlinkinLedDriver.BlinkinPattern.GREEN : RevBlinkinLedDriver.BlinkinPattern.RED;
+            RevBlinkinLedDriver.BlinkinPattern firstBlink = slowMode.val ? RevBlinkinLedDriver.BlinkinPattern.AQUA : fieldMode.val ? RevBlinkinLedDriver.BlinkinPattern.VIOLET : hasLock ? RevBlinkinLedDriver.BlinkinPattern.GREEN : RevBlinkinLedDriver.BlinkinPattern.RED;
 
             boolean pixelL = robot.leftPixelTrigger.val;
             boolean pixelR = robot.rightPixelTrigger.val;

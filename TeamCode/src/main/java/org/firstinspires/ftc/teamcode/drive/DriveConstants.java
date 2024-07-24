@@ -92,7 +92,7 @@ public class DriveConstants {
     public static double MAX_ANG_VEL = Math.toRadians(143.385);
     public static double MAX_ANG_ACCEL = Math.toRadians(163.67673913043478);
 
-    public static PIDFCoefficients liftPIDF = new PIDFCoefficients(4, 0, 0, 0);
+    public static PIDFCoefficients liftPIDF = new PIDFCoefficients(1, 0, 0, 0);
 
     public static double encoderTicksToInches(double ticks) {
         return WHEEL_RADIUS * 2 * Math.PI * GEAR_RATIO * ticks / TICKS_PER_REV;

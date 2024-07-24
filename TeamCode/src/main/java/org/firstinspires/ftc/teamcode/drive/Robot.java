@@ -36,14 +36,12 @@ public class Robot {
     public final MotorMultiState intake;
     public final DistanceTrigger leftPixelTrigger;
     public final DistanceTrigger rightPixelTrigger;
-    public final SwappableCameras camera;
-    private final CameraPoseAdjust cameraPoseAdjust;
     public boolean adjustedPose = false;
     public final LEDStrip statusLEDs;
     public final SampleMecanumDrive driveBase;
     public final ServoToggle plane;
 
-    public static double intakeSpeed = 0.4;
+    public static double intakeSpeed = -1;
 
     public Robot(HardwareMap hardwareMap, Boolean auto) {
         driveBase = new SampleMecanumDrive(hardwareMap);
@@ -60,9 +58,6 @@ public class Robot {
             plane = null;
         }
 
-        camera = new SwappableCameras(hardwareMap, new BackwardCamera(), new ForwardCamera(), auto);
-        cameraPoseAdjust = new CameraPoseAdjust(driveBase, new BackwardCamera());
-
         statusLEDs = new LEDStrip(hardwareMap, "statusLEDs");
 
         driveBase.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -75,8 +70,6 @@ public class Robot {
     //    Called on a loop during the init stage, before the start button is pressed
     public void updateInit() {
         updateBase();
-        camera.update();
-        adjustedPose = cameraPoseAdjust.update(true);
         statusLEDs.update();
     }
 
@@ -135,8 +128,6 @@ public class Robot {
         leftPixelTrigger.update();
         rightPixelTrigger.update();
         liftArmAssembly.update(leftPixelTrigger.val, rightPixelTrigger.val);
-        camera.update();
         statusLEDs.update();
-        adjustedPose = cameraPoseAdjust.update(false);
     }
 }

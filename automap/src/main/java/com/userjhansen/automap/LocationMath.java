@@ -37,6 +37,6 @@ public class LocationMath {
 
     //    Calculates the amount the lift has to be extended in inches to get the required height
     public static double calculateLiftExtension(double liftFloorOffset, double liftVerticalAngle, double desiredHeight) {
-        return (desiredHeight - liftFloorOffset) / Math.cos(liftVerticalAngle);
+        return (desiredHeight - liftFloorOffset) * Math.sin(liftVerticalAngle);
     }
 }

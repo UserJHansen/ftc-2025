@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
 
 public enum ArmTarget {
-    Caught,
-    Waiting,
-    Nab,
-    Primed,
+    Caught, // For if the pixel is caught and needs to be outtaked
+    Waiting, // Waiting for a new pixel
+    ShieldUp, // Stop the motor and move the shield out of the way
+    Nab, // Put the Claw down and in
+    Primed, // Pixels are held
+    ArmOut, // Move the arm out from the intake
     LiftRaised,
     Drop,
     //    Transient state for when the lift is returning to neutral
@@ -15,13 +17,19 @@ public enum ArmTarget {
         Caught.next = Waiting;
 
         Waiting.timeOut = -1;
-        Waiting.next = Nab;
+        Waiting.next = ShieldUp;
+
+        ShieldUp.timeOut = 1000;
+        ShieldUp.next = Nab;
 
         Nab.timeOut = 500;
         Nab.next = Primed;
 
         Primed.timeOut = -1;
-        Primed.next = LiftRaised;
+        Primed.next = ArmOut;
+
+        ArmOut.timeOut = 200;
+        ArmOut.next = LiftRaised;
 
         LiftRaised.timeOut = -1;
         LiftRaised.next = Drop;

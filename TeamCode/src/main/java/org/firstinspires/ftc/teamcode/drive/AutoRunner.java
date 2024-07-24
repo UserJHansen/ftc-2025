@@ -59,7 +59,7 @@ public class AutoRunner extends Robot {
 
         if (!inPosition) {
             inPosition = true;
-            camera.selectCameraTwo(true);
+//            camera.selectCameraTwo(true);
         }
 
         switch (VisionDetection.position) {
@@ -89,7 +89,7 @@ public class AutoRunner extends Robot {
     @Override
     public void update() {
         super.update();
-        camera.selectCameraTwo(true);
+//        camera.selectCameraTwo(true);
 
         if (!hasLocked) {
             try {

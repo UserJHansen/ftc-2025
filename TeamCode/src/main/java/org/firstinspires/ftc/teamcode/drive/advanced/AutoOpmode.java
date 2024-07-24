@@ -47,7 +47,7 @@ public class AutoOpmode extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         autoRunner = new AutoRunner(hardwareMap, telemetry);
-        autoRunner.camera.selectCameraTwo(false);
+//        autoRunner.camera.selectCameraTwo(false);
         autoRunner.liftArmAssembly.target = ArmTarget.Primed;
         autoRunner.liftArmAssembly.update(true, true);
 
@@ -55,7 +55,7 @@ public class AutoOpmode extends LinearOpMode {
             autoRunner.updateInit();
             Logging.LOG("DETECTED_POSITION", VisionDetection.position);
         }
-        autoRunner.camera.selectCameraTwo(false);
+//        autoRunner.camera.selectCameraTwo(false);
 
         if (isStopRequested()) return;
 
