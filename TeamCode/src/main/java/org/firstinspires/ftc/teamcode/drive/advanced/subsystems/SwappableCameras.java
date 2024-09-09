@@ -9,20 +9,20 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
+import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.cameras.Camera;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.concurrent.TimeUnit;
 
+// TODO: Rewrite to use the new multi view api
 public class SwappableCameras {
-    WebcamName webcam1, webcam2;
-    Camera camera1, camera2;
-
     public VisionPortal visionPortal;
     public AprilTagProcessor aprilProcessor;
-    public CSVisionProcessor visionProcessor;
-
+    WebcamName webcam1, webcam2;
+    Camera camera1, camera2;
     boolean selectedCameraTwo = false;
+    private boolean setExposure = true;
 
     public SwappableCameras(HardwareMap hardwareMap, Camera mainCamera, Camera secondaryCamera, Boolean auto) {
         int mult = auto ? 3 : 3;
@@ -36,8 +36,6 @@ public class SwappableCameras {
                 .setLensIntrinsics(1485.792154 / mult, 1475.793189 / mult, 911.2968158 / mult, 513.6169402 / mult)
                 .build();
 
-        visionProcessor = new CSVisionProcessor();
-
         webcam1 = hardwareMap.get(WebcamName.class, mainCamera.getName());
         camera1 = mainCamera;
         webcam2 = hardwareMap.get(WebcamName.class, secondaryCamera.getName());
@@ -48,13 +46,10 @@ public class SwappableCameras {
         // Create the vision portal by using a builder.
         visionPortal = CameraStatic.baseVisionPortal
                 .setCamera(switchableCamera)
-                .setCameraResolution(true ? new Size(640, 360) : new Size(1920, 1080)) // High quality for longer viewing
+                .setCameraResolution(new Size(1920, 1080)) // High quality for longer viewing
 
                 .addProcessor(aprilProcessor)
-                .addProcessor(visionProcessor)
                 .build();
-
-        visionPortal.setProcessorEnabled(visionProcessor, false);
     }
 
     public void selectCameraTwo(boolean selectedTwo) {
@@ -64,15 +59,11 @@ public class SwappableCameras {
         if (selectedTwo) {
             visionPortal.setActiveCamera(webcam2);
             visionPortal.setProcessorEnabled(aprilProcessor, false);
-            visionPortal.setProcessorEnabled(visionProcessor, true);
         } else {
             visionPortal.setActiveCamera(webcam1);
             visionPortal.setProcessorEnabled(aprilProcessor, true);
-            visionPortal.setProcessorEnabled(visionProcessor, false);
         }
     }
-
-    private boolean setExposure = true;
 
     public void update() {
         if (!setExposure && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {

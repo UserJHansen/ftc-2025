@@ -9,28 +9,25 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.acmerobotics.roadrunner.geometry.Vector2d;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.sun.tools.javac.util.List;
 import com.userjhansen.automap.Maps.InsideOne;
-import com.userjhansen.automap.Maps.Map;
 import com.userjhansen.automap.Maps.OutsideOne;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.drive.advanced.VisionDetection;
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.Logging;
 
 @Config
 public class AutoRunner extends Robot {
     public static double distanceThreshold = 10;
     public static double angleThreshold = Math.toRadians(45);
+    public RevBlinkinLedDriver.BlinkinPattern currentPattern = RevBlinkinLedDriver.BlinkinPattern.RAINBOW_RAINBOW_PALETTE;
+    private boolean hasLocked = false;
+    private boolean inPosition = false;
 
     public AutoRunner(HardwareMap hardwareMap, Telemetry telemetry) {
         super(hardwareMap, true);
 
         Logging.telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
     }
-
-    private boolean hasLocked = false;
-    private boolean inPosition = false;
 
     @Override
     public void updateInit() {
@@ -39,7 +36,7 @@ public class AutoRunner extends Robot {
 
 //        UPDATE Light state
         if (!hasLocked) {
-            statusLEDs.changeTo(RevBlinkinLedDriver.BlinkinPattern.RED);
+//            statusLEDs.changeTo(RevBlinkinLedDriver.BlinkinPattern.RED);
             return;
         }
 
@@ -53,7 +50,7 @@ public class AutoRunner extends Robot {
         Logging.LOG("Distance", currentDiff.vec().distTo(new Vector2d()));
         Logging.LOG("Heading Diff", Math.abs(currentDiff.getHeading()));
         if (currentDiff.vec().distTo(new Vector2d()) > distanceThreshold || Math.abs(currentDiff.getHeading()) > angleThreshold) {
-            statusLEDs.changeTo(RevBlinkinLedDriver.BlinkinPattern.ORANGE);
+//            statusLEDs.changeTo(RevBlinkinLedDriver.BlinkinPattern.ORANGE);
             return;
         }
 
@@ -61,35 +58,11 @@ public class AutoRunner extends Robot {
             inPosition = true;
 //            camera.selectCameraTwo(true);
         }
-
-        switch (VisionDetection.position) {
-            case 1:
-                statusLEDs.changeTo(List.of(
-                        RevBlinkinLedDriver.BlinkinPattern.GREEN,
-                        RevBlinkinLedDriver.BlinkinPattern.VIOLET
-                ));
-                break;
-            case 2:
-                statusLEDs.changeTo(List.of(
-                        RevBlinkinLedDriver.BlinkinPattern.GREEN,
-                        RevBlinkinLedDriver.BlinkinPattern.BLUE
-                ));
-                break;
-            case 3:
-                statusLEDs.changeTo(List.of(
-                        RevBlinkinLedDriver.BlinkinPattern.GREEN,
-                        RevBlinkinLedDriver.BlinkinPattern.YELLOW
-                ));
-                break;
-        }
     }
-
-    public RevBlinkinLedDriver.BlinkinPattern currentPattern = RevBlinkinLedDriver.BlinkinPattern.RAINBOW_RAINBOW_PALETTE;
 
     @Override
     public void update() {
         super.update();
-//        camera.selectCameraTwo(true);
 
         if (!hasLocked) {
             try {
@@ -97,28 +70,6 @@ public class AutoRunner extends Robot {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
-            return;
-        }
-
-        switch (VisionDetection.position) {
-            case 1:
-                statusLEDs.changeTo(List.of(
-                        currentPattern,
-                        RevBlinkinLedDriver.BlinkinPattern.VIOLET
-                ));
-                break;
-            case 2:
-                statusLEDs.changeTo(List.of(
-                        currentPattern,
-                        RevBlinkinLedDriver.BlinkinPattern.BLUE
-                ));
-                break;
-            case 3:
-                statusLEDs.changeTo(List.of(
-                        currentPattern,
-                        RevBlinkinLedDriver.BlinkinPattern.YELLOW
-                ));
-                break;
         }
     }
 }

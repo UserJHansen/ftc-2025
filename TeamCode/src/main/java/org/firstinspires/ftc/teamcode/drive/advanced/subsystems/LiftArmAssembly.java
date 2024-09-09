@@ -3,59 +3,52 @@ package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 
 import java.util.concurrent.TimeUnit;
 
 @Config
-
 public class LiftArmAssembly {
-    private final Lift liftL;
-    private final Lift liftR;
-    private final ServoMultiState elbowL;
-    private final ServoMultiState wristL;
-    private final ServoToggle claw;
-    private final ServoToggle flap;
-    public ArmTarget target = ArmTarget.Waiting;
-    public double liftTargetHeight = 9;
-    public static double ENDGAME_LIFT_HEIGHT = 7.9;
+    private final Lift intakeSlides;
+    private final ServoToggle intakeFlip;
+    private final SelectiveIntakeMotor intakeMotor;
+
+    private final Lift outtakeLift;
+    private final ContinuousServoToggle outtakeServo;
+    private final ServoMultiState fourBar;
+
+    public ArmTarget target = ArmTarget.Retracted;
+    public double intakeDistance = 10;
+    public double outtakeDistance = 10;
     private ArmTarget oldTarget = null;
     private Deadline updateTimeout;
 
     public LiftArmAssembly(HardwareMap hardwareMap) {
-        liftL = new Lift(hardwareMap.get(DcMotorEx.class, "liftL"), DcMotor.Direction.FORWARD);
-        liftR = new Lift(hardwareMap.get(DcMotorEx.class, "liftR"), DcMotor.Direction.FORWARD);
-        elbowL = new ServoMultiState(hardwareMap, "elbow", new double[]{0.15, 0.8, 0.4}); // First value is grabbing, second is deploy to board, third is hold up
-        wristL = new ServoMultiState(hardwareMap, "wrist", new double[]{1, 0.2, 0.00}); // First is grabbing, second is hold to board, third is drop pixel
-        claw = new ServoToggle(hardwareMap, "claw", 0.2, 0.5); // Let go, grip
-        flap = new ServoToggle(hardwareMap, "flap", 0.0, 0.45); // Let go, grip
-        flap.changeTo(true);
+        intakeSlides = new Lift(hardwareMap.get(DcMotorEx.class, "intakeSlide"), DcMotor.Direction.FORWARD, new PIDFCoefficients(1, 0, 0, 0));
+        intakeFlip = new ServoToggle(hardwareMap, "intakeFlip", 0d, 1d); // Down state is on, up state is off
+        intakeMotor = new SelectiveIntakeMotor(hardwareMap, "intakeMotor", "intakeColour", 0.8);
+
+        outtakeLift = new Lift(hardwareMap.get(DcMotorEx.class, "outtakeLift"), DcMotor.Direction.FORWARD, new PIDFCoefficients(1, 0, 0, 0));
+        outtakeServo = new ContinuousServoToggle(hardwareMap, "outtakeServo", 0d, 1d); // Off is off, on is forward (outtake)
+        fourBar = new ServoMultiState(hardwareMap, "fourBar", new double[]{0, 1}); // State 0 is ready to pickup the inttaked sample, State 1 is ready to deploy
     }
 
-    public void update(boolean leftPixel, boolean rightPixel) {
-        Logging.LOG("liftHeight", liftTargetHeight);
-        Logging.LOG("lift-T-I", liftL.targetHeight);
-        Logging.LOG("lift-T-T", liftL.liftMotor.getTargetPosition());
-        Logging.LOG("liftL-P", liftL.liftMotor.getCurrentPosition());
-        Logging.LOG("liftR-P", liftR.liftMotor.getCurrentPosition());
+    public void update() {
+        Logging.LOG("LIFT STATE MACHINE:", this.target);
 
-        Logging.LOG("elbowL", elbowL.get());
-        Logging.LOG("wristL", wristL.get());
-        Logging.LOG("claw", claw.get());
-        Logging.LOG("flap", flap.get());
+        this.intakeMotor.update();
 
-        if (target == ArmTarget.Waiting) {
-            if (leftPixel && rightPixel && updateTimeout == null) {
-                updateTimeout = new Deadline(1500, TimeUnit.MILLISECONDS);
-            } else if ((!leftPixel || !rightPixel) && updateTimeout != null) {
+        if (target == ArmTarget.Searching) {
+            boolean intakeState = this.intakeMotor.get();
+            if (intakeState && updateTimeout == null) { // Intake has a sample
+                updateTimeout = new Deadline(500, TimeUnit.MILLISECONDS); // Make for sure sure that we have a sample
+            } else if (!intakeState && updateTimeout != null) { // No sample in intake
                 updateTimeout = null;
             }
         }
-
-        if (target == ArmTarget.LiftRaised) setLiftPosition(liftTargetHeight);
 
         if (updateTimeout != null && updateTimeout.hasExpired()) {
             target = target.next;
@@ -70,104 +63,74 @@ public class LiftArmAssembly {
             }
 
             switch (target) {
-                case Waiting:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(2);
-                    setWristPosition(false);
-                    claw.changeTo(false);
-                    flap.changeTo(true);
+                case Retracted:
+                case IntakeRetract:
+                case OuttakeRetract:
+                    this.intakeSlides.setDistance(0);
+                    this.intakeFlip.update(false);
+                    this.intakeMotor.active = false;
+
+                    this.outtakeLift.setDistance(0);
+                    this.outtakeServo.update(false);
+                    this.fourBar.update(false);
                     break;
-                case Caught:
-                case ShieldUp:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(2);
-                    setWristPosition(false);
-                    claw.changeTo(false);
-                    flap.changeTo(false);
+
+                case IntakeExtend:
+                case Captured:
+                    this.intakeSlides.setDistance(intakeDistance);
+                    this.intakeFlip.update(false);
+                    this.intakeMotor.active = false;
+
+                    this.outtakeLift.setDistance(0);
+                    this.outtakeServo.update(false);
+                    this.fourBar.update(false);
                     break;
-                case Nab:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(false);
-                    setWristPosition(false);
-                    claw.changeTo(false);
-                    flap.changeTo(false);
+
+                case Searching:
+                    this.intakeSlides.setDistance(intakeDistance);
+                    this.intakeFlip.update(true);
+                    this.intakeMotor.active = true;
+
+                    this.outtakeLift.setDistance(0);
+                    this.outtakeServo.update(false);
+                    this.fourBar.update(false);
                     break;
-                case Primed:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(false);
-                    setWristPosition(false);
-                    claw.changeTo(true);
-                    flap.changeTo(false);
+
+                case InternalTransfer:
+                    this.intakeSlides.setDistance(0);
+                    this.intakeFlip.update(false);
+                    this.intakeMotor.overrideMotor(0.2);
+
+                    this.outtakeLift.setDistance(0);
+                    this.outtakeServo.update(false);
+                    this.fourBar.update(false);
                     break;
-                case ArmOut:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(true);
-                    setWristPosition(false);
-                    claw.changeTo(true);
-                    flap.changeTo(false);
+
+                case OuttakeExtend:
+                case OuttakeReady:
+                    this.intakeSlides.setDistance(0);
+                    this.intakeFlip.update(false);
+                    this.intakeMotor.overrideMotor(0);
+
+                    this.outtakeLift.setDistance(outtakeDistance);
+                    this.outtakeServo.update(false);
+                    this.fourBar.update(true);
                     break;
-                case LiftRaised:
-                    setLiftPosition(liftTargetHeight);
-                    setElbowPosition(true);
-                    setWristPosition(true);
-                    claw.changeTo(true);
-                    flap.changeTo(false);
-                    break;
-                case Drop:
-                    setLiftPosition(liftTargetHeight);
-                    setElbowPosition(true);
-                    setWristPosition(2);
-                    claw.changeTo(false);
-                    flap.changeTo(true);
-                    break;
-                case Return:
-                    setLiftPosition(Lift.liftBase);
-                    setElbowPosition(true);
-                    setWristPosition(true);
-                    claw.changeTo(false);
-                    flap.changeTo(true);
+
+                case Outtake:
+                    this.intakeSlides.setDistance(0);
+                    this.intakeFlip.update(false);
+                    this.intakeMotor.overrideMotor(0);
+
+                    this.outtakeLift.setDistance(outtakeDistance);
+                    this.outtakeServo.update(true);
+                    this.fourBar.update(true);
                     break;
             }
         }
     }
 
-    public void endgame(Boolean pull) {
-        setLiftPosition(pull ? ENDGAME_LIFT_HEIGHT : Lift.liftBase);
-        setElbowPosition(true);
-    }
-
-    private void setLiftPosition(double height) {
-        liftL.setHeight(height);
-        liftR.setHeight(height);
-    }
-
-    private void setElbowPosition(boolean up) {
-        elbowL.changeTo(up);
-    }
-
-    private void setElbowPosition(int state) {
-        elbowL.changeTo(state);
-    }
-
-    private void setWristPosition(boolean state) {
-        wristL.changeTo(state);
-    }
-
-    private void setWristPosition(int state) {
-        wristL.changeTo(state);
-    }
-
-    private final Deadline updateDeadline = new Deadline(25, java.util.concurrent.TimeUnit.MILLISECONDS);
-
-    public void update(double up, double down) {
-        if (updateDeadline.hasExpired()) {
-            updateDeadline.reset();
-            liftTargetHeight += up * 0.1;
-            liftTargetHeight -= down * 0.1;
-        }
-    }
-
     public void reset() {
-        this.target = ArmTarget.Caught;
+        this.target = this.target.safeBack;
     }
 }

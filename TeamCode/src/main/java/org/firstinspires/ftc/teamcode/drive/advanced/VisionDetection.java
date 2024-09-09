@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class VisionDetection {
-    public static int position;
-
-    public static List<AprilTagDetection> detections = new ArrayList();
+    public static List<AprilTagDetection> detections = new ArrayList<>();
 
     public VisionDetection() {
     }

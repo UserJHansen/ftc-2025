@@ -15,12 +15,11 @@ public class LEDStrip {
     public static Deadline timeout = new Deadline(1000 / flashRate, TimeUnit.MILLISECONDS);
     final RevBlinkinLedDriver driver;
     final List<RevBlinkinLedDriver.BlinkinPattern> colours = new ArrayList<>();
+    int index = 0;
 
     public LEDStrip(HardwareMap hardwareMap, String name) {
         this.driver = hardwareMap.get(RevBlinkinLedDriver.class, name);
     }
-
-    int index = 0;
 
     public void update() {
         if (timeout.hasExpired()) {

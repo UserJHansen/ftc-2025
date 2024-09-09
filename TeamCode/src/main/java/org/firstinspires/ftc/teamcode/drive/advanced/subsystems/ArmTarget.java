@@ -1,46 +1,66 @@
 package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
 
 public enum ArmTarget {
-    Caught, // For if the pixel is caught and needs to be outtaked
-    Waiting, // Waiting for a new pixel
-    ShieldUp, // Stop the motor and move the shield out of the way
-    Nab, // Put the Claw down and in
-    Primed, // Pixels are held
-    ArmOut, // Move the arm out from the intake
-    LiftRaised,
-    Drop,
-    //    Transient state for when the lift is returning to neutral
-    Return;
+    Retracted,
+    IntakeExtend,
+    Searching,
+    Captured, // Flip back the intake and make sure the pixel is secured
+    IntakeRetract,
+    InternalTransfer, // Transfer to the outtake
+    InternalWait,
+    OuttakeExtend,
+    OuttakeReady,
+    Outtake,
+    OuttakeRetract;
 
     static {
-        Caught.timeOut = 2000;
-        Caught.next = Waiting;
+        Retracted.timeOut = -1;
+        Retracted.next = IntakeExtend;
+        Retracted.safeBack = Retracted;
 
-        Waiting.timeOut = -1;
-        Waiting.next = ShieldUp;
+        IntakeExtend.timeOut = 1500;
+        IntakeExtend.next = Searching;
+        IntakeExtend.safeBack = Retracted;
 
-        ShieldUp.timeOut = 1000;
-        ShieldUp.next = Nab;
+        Searching.timeOut = -1;
+        Searching.next = Captured;
+        Searching.safeBack = Retracted; // Maybe we don't actually want to collect
 
-        Nab.timeOut = 500;
-        Nab.next = Primed;
+        Captured.timeOut = 500;
+        Captured.next = IntakeRetract;
+        Captured.safeBack = Searching; // Assume sample wasn't collected properly
 
-        Primed.timeOut = -1;
-        Primed.next = ArmOut;
+        IntakeRetract.timeOut = 1500;
+        IntakeRetract.next = InternalTransfer;
+        IntakeRetract.safeBack = IntakeExtend; // We want to put the slides back out, sample probably fell
 
-        ArmOut.timeOut = 200;
-        ArmOut.next = LiftRaised;
+        InternalTransfer.timeOut = 800;
+        InternalTransfer.next = InternalWait;
+        InternalTransfer.safeBack = Retracted;
 
-        LiftRaised.timeOut = -1;
-        LiftRaised.next = Drop;
+        InternalWait.timeOut = -1;
+        InternalWait.next = OuttakeExtend;
+        InternalWait.safeBack = InternalWait; // Just go forward, we've got it now
 
-        Drop.timeOut = 500;
-        Drop.next = Return;
+        OuttakeExtend.timeOut = 2000;
+        OuttakeExtend.next = OuttakeReady;
+        OuttakeExtend.safeBack = Retracted; // Pixel probably fell out somewhere
 
-        Return.timeOut = 500;
-        Return.next = Waiting;
+        OuttakeReady.timeOut = -1;
+        OuttakeReady.next = Outtake;
+        OuttakeReady.safeBack = Outtake; // Just go forward please
+
+        Outtake.timeOut = 1500;
+        Outtake.next = OuttakeRetract;
+        Outtake.safeBack = Outtake; // Sample still isn't out
+
+        OuttakeRetract.timeOut = 1500;
+        OuttakeRetract.next = Retracted;
+        OuttakeRetract.safeBack = OuttakeReady; // Lift isn't going down nicely, keep it up
+        // Or the sample wasn't deployed
     }
 
     public double timeOut;
     public ArmTarget next;
+    public ArmTarget safeBack;
 }

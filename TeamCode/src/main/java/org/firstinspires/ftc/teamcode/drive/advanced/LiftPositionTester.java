@@ -8,10 +8,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.Logging;
-import org.firstinspires.ftc.teamcode.drive.galahlib.Button;
 
 @TeleOp(group = "advanced", name = "Lift Position Test")
 @Config

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
+package org.firstinspires.ftc.teamcode.drive.advanced.subsystems.cameras;
 
 import com.acmerobotics.dashboard.config.Config;
 
@@ -8,18 +8,20 @@ import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.teamcode.drive.advanced.VisionDetection;
+import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.SwappableCameras;
+import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.VisionBase;
 
 @Config
-public class BackwardCamera extends VisionBase implements Camera {
-    public static double cameraX = -3.7401595;
-    public static double cameraY = 7.7165396;
-    public static double cameraZ = -5.6692944;
-    public static double firstAngle = -50;
-    public static double secondAngle = 45.5904;
-    public static double thirdAngle = 160;
+public class ForwardCamera extends VisionBase implements Camera {
+    public static double cameraX = 0 * 0.393701;
+    public static double cameraY = 0 * 0.393701;
+    public static double cameraZ = 0 * 0.393701;
+    public static double firstAngle = 0;
+    public static double secondAngle = 0;
+    public static double thirdAngle = 180;
 
     public String getName() {
-        return "Webcam 1";
+        return "Webcam 2";
     }
 
     public OpenGLMatrix getCameraPos() {

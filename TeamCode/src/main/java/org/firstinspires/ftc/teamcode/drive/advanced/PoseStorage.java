@@ -9,4 +9,6 @@ import com.acmerobotics.roadrunner.geometry.Pose2d;
  */
 public class PoseStorage {
     public static Pose2d currentPose = new Pose2d(12, -61.5, -Math.PI / 2);
+
+    public static boolean isRedAlliance = false;
 }

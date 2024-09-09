@@ -14,12 +14,8 @@ import com.noahbres.meepmeep.roadrunner.trajectorysequence.TrajectorySequenceBui
 
 import com.userjhansen.automap.AutoPart;
 import com.userjhansen.automap.Maps.InsideOne;
-import com.userjhansen.automap.Maps.InsideThree;
-import com.userjhansen.automap.Maps.InsideTwo;
 import com.userjhansen.automap.Maps.Map;
 import com.userjhansen.automap.Maps.OutsideOne;
-import com.userjhansen.automap.Maps.OutsideThree;
-import com.userjhansen.automap.Maps.OutsideTwo;
 
 import java.util.ArrayList;
 
@@ -88,12 +84,6 @@ public class MeepMeepVis {
 
             trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new OutsideOne(), isRed, false)));
             trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new InsideOne(), isRed, true)));
-
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new OutsideTwo(), isRed, false)));
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new InsideTwo(), isRed, true)));
-
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new OutsideThree(), isRed, false)));
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new InsideThree(), isRed, true)));
 
             loopIsRed = !loopIsRed;
         } while (!loopIsRed);
