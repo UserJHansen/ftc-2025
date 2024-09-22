@@ -48,6 +48,7 @@ import org.firstinspires.ftc.teamcode.util.LynxModuleUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /*
  * Simple mecanum drive hardware implementation for REV hardware.
@@ -71,7 +72,8 @@ public class SampleMecanumDrive extends MecanumDrive {
     private final List<Integer> lastEncPositions = new ArrayList<>();
     private final List<Integer> lastEncVels = new ArrayList<>();
 
-    private final GyroLocalizer localizer;
+    private final RollbackLocalizer localizer;
+    private final GyroLocalizer actualLocalizer;
 
     public SampleMecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
@@ -114,15 +116,16 @@ public class SampleMecanumDrive extends MecanumDrive {
         }
 
         // TODO: reverse any motors using DcMotor.setDirection()
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftRear.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightFront.setDirection(DcMotorSimple.Direction.FORWARD);
-        rightRear.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftFront.setDirection(DcMotorSimple.Direction.FORWARD);
+        leftRear.setDirection(DcMotorSimple.Direction.FORWARD);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightRear.setDirection(DcMotorSimple.Direction.REVERSE);
 
         List<Integer> lastTrackingEncPositions = new ArrayList<>();
         List<Integer> lastTrackingEncVels = new ArrayList<>();
 
-        localizer = new GyroLocalizer(hardwareMap, lastTrackingEncPositions, lastTrackingEncVels);
+        actualLocalizer = new GyroLocalizer(hardwareMap, lastTrackingEncPositions, lastTrackingEncVels);
+        localizer = new RollbackLocalizer(actualLocalizer);
         setLocalizer(localizer);
 
         trajectorySequenceRunner = new TrajectorySequenceRunner(
@@ -143,7 +146,7 @@ public class SampleMecanumDrive extends MecanumDrive {
     }
 
     public List<Double> getTrackingPositions() {
-        return localizer.getWheelPositions();
+        return actualLocalizer.getWheelPositions();
     }
 
     public TrajectoryBuilder trajectoryBuilder(Pose2d startPose) {
@@ -312,6 +315,6 @@ public class SampleMecanumDrive extends MecanumDrive {
 
     @Override
     public Double getExternalHeadingVelocity() {
-        return localizer.getPoseVelocity().getHeading();
+        return Objects.requireNonNull(localizer.getPoseVelocity()).getHeading();
     }
 }
