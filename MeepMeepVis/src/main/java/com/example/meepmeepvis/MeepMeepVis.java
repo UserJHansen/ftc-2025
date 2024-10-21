@@ -62,7 +62,7 @@ public class MeepMeepVis {
         }
     }
 
-    public static TrajectorySequence buildTrajectorySequence(DriveShim drive, Map map, boolean isRed, boolean isInside) {
+    public static TrajectorySequence buildTrajectorySequence(DriveShim drive, Map map, boolean isRed) {
         TrajectorySequenceBuilder traj = drive.trajectorySequenceBuilder(
                 new Pose2d(
                         map.getStartPosition().getX(),
@@ -70,7 +70,7 @@ public class MeepMeepVis {
                         map.getStartPosition().getHeading() + (isRed ? 0 : Math.PI))
         );
 
-        addParts(traj, AutoPart.makeFullAutoList(map, isInside), isRed);
+        addParts(traj, AutoPart.makeFullAutoList(map), isRed);
 
         return traj.build();
     }
@@ -83,13 +83,13 @@ public class MeepMeepVis {
         do {
             boolean isRed = loopIsRed;
 
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new OutsideOne(), isRed, false)));
-            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new InsideOne(), isRed, true)));
+            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new OutsideOne(), isRed)));
+            trajs.add(new Pair<>(isRed, (drive) -> buildTrajectorySequence(drive, new InsideOne(), isRed)));
 
             loopIsRed = !loopIsRed;
         } while (!loopIsRed);
 
-        meepMeep.setBackground(MeepMeep.Background.FIELD_CENTERSTAGE_JUICE_DARK)
+        meepMeep.setBackground(MeepMeep.Background.FIELD_INTOTHEDEEP_JUICE_DARK)
                 .setDarkMode(true)
                 .setBackgroundAlpha(0.95f);
 
