@@ -1,12 +1,13 @@
 package com.userjhansen.automap;
 
-import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.geometry.Pose2d;
 import com.userjhansen.automap.Maps.Map;
 
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 public class AutoPart {
     public PartType type;
@@ -50,7 +51,7 @@ public class AutoPart {
 
     public Pose2d modified(double yMult, double headingMult) {
         Pose2d pose = getPose();
-        return new Pose2d(pose.position.x, pose.position.y * yMult, pose.heading.real * headingMult);
+        return new Pose2d(pose.getX(), pose.getY() * yMult, pose.getHeading() * headingMult);
     }
 
     public Pose2d getPose() {
