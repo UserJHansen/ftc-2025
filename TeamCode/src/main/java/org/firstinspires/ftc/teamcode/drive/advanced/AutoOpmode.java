@@ -65,7 +65,7 @@ public class AutoOpmode extends LinearOpMode {
 //                autoMap.getStartPosition().getY()*(isRed ? 1 : -1),
 //                autoMap.getStartPosition().getHeading()+(isRed ? 0 : Math.PI)));
 
-        AutoPart[] parts = AutoPart.makeFullAutoList(autoMap, autoRunner.driveBase.getPoseEstimate().getX() > INSIDE_CUTOFF);
+        AutoPart[] parts = AutoPart.makeFullAutoList(autoMap);
 
         RevBlinkinLedDriver.BlinkinPattern[] lightPatterns = {
                 RevBlinkinLedDriver.BlinkinPattern.RED,

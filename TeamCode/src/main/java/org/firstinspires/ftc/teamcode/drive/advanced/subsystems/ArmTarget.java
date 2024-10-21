@@ -2,49 +2,49 @@ package org.firstinspires.ftc.teamcode.drive.advanced.subsystems;
 
 public enum ArmTarget {
     Retracted,
-    IntakeExtend,
-    Searching,
-    Captured, // Flip back the intake and make sure the pixel is secured
-    IntakeRetract,
-    InternalTransfer, // Transfer to the outtake
-    InternalWait,
+    Intake,
+    InternalTransferPt1, // Transfer to the outtake
+    InternalTransferPt2, // Hover to grab
+    InternalWait, // Grab
+    OuttakePartialExtend,
     OuttakeExtend,
     OuttakeReady,
     Outtake,
-    OuttakeRetract;
+    OuttakeRetract,
+
+    SpecimenSmallLift,
+    SpecimenLiftFold,
+    SpecimenWait,
+    SpecimenReady;
 
     static {
         Retracted.timeOut = -1;
-        Retracted.next = IntakeExtend;
+        Retracted.next = Intake;
         Retracted.safeBack = Retracted;
 
-        IntakeExtend.timeOut = 1500;
-        IntakeExtend.next = Searching;
-        IntakeExtend.safeBack = Retracted;
+        Intake.timeOut = -1;
+        Intake.next = InternalTransferPt1;
+        Intake.safeBack = Retracted;
 
-        Searching.timeOut = -1;
-        Searching.next = Captured;
-        Searching.safeBack = Retracted; // Maybe we don't actually want to collect
+        InternalTransferPt1.timeOut = -1;
+        InternalTransferPt1.next = InternalTransferPt2;
+        InternalTransferPt1.safeBack = Intake;
 
-        Captured.timeOut = 500;
-        Captured.next = IntakeRetract;
-        Captured.safeBack = Searching; // Assume sample wasn't collected properly
-
-        IntakeRetract.timeOut = 1500;
-        IntakeRetract.next = InternalTransfer;
-        IntakeRetract.safeBack = IntakeExtend; // We want to put the slides back out, sample probably fell
-
-        InternalTransfer.timeOut = 800;
-        InternalTransfer.next = InternalWait;
-        InternalTransfer.safeBack = Retracted;
+        InternalTransferPt2.timeOut = 300;
+        InternalTransferPt2.next = InternalWait;
+        InternalTransferPt2.safeBack = InternalTransferPt1;
 
         InternalWait.timeOut = -1;
-        InternalWait.next = OuttakeExtend;
-        InternalWait.safeBack = InternalWait; // Just go forward, we've got it now
+        InternalWait.next = OuttakePartialExtend;
+        InternalWait.safeBack = InternalTransferPt1; // Didn't grab sample properly
+
+        OuttakePartialExtend.timeOut = 500;
+        OuttakePartialExtend.next = OuttakeExtend;
+        OuttakePartialExtend.safeBack = Retracted; // Sample probably fell out somewhere
 
         OuttakeExtend.timeOut = 2000;
         OuttakeExtend.next = OuttakeReady;
-        OuttakeExtend.safeBack = Retracted; // Pixel probably fell out somewhere
+        OuttakeExtend.safeBack = Retracted; // Sample probably fell out somewhere
 
         OuttakeReady.timeOut = -1;
         OuttakeReady.next = Outtake;
@@ -58,6 +58,27 @@ public enum ArmTarget {
         OuttakeRetract.next = Retracted;
         OuttakeRetract.safeBack = OuttakeReady; // Lift isn't going down nicely, keep it up
         // Or the sample wasn't deployed
+
+        //////////////////////////////
+        // Special states for specimen
+        //////////////////////////////
+
+        SpecimenSmallLift.timeOut = 500;
+        SpecimenSmallLift.next = SpecimenLiftFold;
+        SpecimenSmallLift.safeBack = Retracted;
+
+        SpecimenLiftFold.timeOut = 500;
+        SpecimenLiftFold.next = SpecimenWait;
+        SpecimenLiftFold.safeBack = Outtake;
+
+        SpecimenWait.timeOut = -1;
+        SpecimenWait.next = SpecimenReady;
+        SpecimenWait.safeBack = Outtake;
+
+        SpecimenReady.timeOut = -1;
+        SpecimenReady.next = OuttakeExtend;
+        SpecimenReady.safeBack = Outtake;
+
     }
 
     public double timeOut;

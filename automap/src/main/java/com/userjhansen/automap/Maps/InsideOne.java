@@ -1,41 +1,46 @@
 package com.userjhansen.automap.Maps;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.userjhansen.automap.AutoPart;
 import com.userjhansen.automap.PartType;
 
 public class InsideOne implements Map {
-    public Pose2d startFloorPixel = new Pose2d(15, -60, Math.PI / 2);
+    public Pose2d startPosition = new Pose2d(-35, -60, -Math.PI / 2);
 
-    public static AutoPart[] floorPixelParts = {
-            new AutoPart(PartType.FORWARD, 9),
-            new AutoPart(PartType.STRAFE, new Pose2d(15, -50)),
-            new AutoPart(PartType.SPLINE_TO, new Pose2d(1, -28, Math.PI), Math.PI),
-            new AutoPart(PartType.WAIT, 3),
+    public static Pose2d depositPosition = new Pose2d(-60, -50, -(Math.PI / 16) + (Math.PI/2));
+
+    public static AutoPart[] startParts = {
+            new AutoPart(PartType.STRAFE, new Pose2d(-9, -32,0)),
             new AutoPart(PartType.ACTION, 0),
-            new AutoPart(PartType.STRAFE, new Pose2d(15, -28)),
 
-    };
-
-    public static AutoPart[] backdropPixelParts = {
-            new AutoPart(PartType.STRAFE, new Pose2d(58, -29, Math.PI)),
-            new AutoPart(PartType.WAIT, 3),
+            new AutoPart(PartType.SPLINE_TO, new Pose2d(-48, -40, Math.PI/2), Math.PI),
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(-48, -35, Math.PI/2)),
             new AutoPart(PartType.ACTION, 1),
-    };
+            new AutoPart(PartType.STRAFE_TO, depositPosition),
+            new AutoPart(PartType.ACTION, 2),
 
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(-59, -35, Math.PI/2)),
+            new AutoPart(PartType.ACTION, 1),
+            new AutoPart(PartType.STRAFE_TO, depositPosition),
+            new AutoPart(PartType.ACTION, 2),
+
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(-54, -24, -Math.PI)),
+            new AutoPart(PartType.STRAFE, new Pose2d(-57, -24, -Math.PI)),
+            new AutoPart(PartType.ACTION, 1),
+            new AutoPart(PartType.STRAFE_TO, depositPosition),
+            new AutoPart(PartType.ACTION, 2),
+
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(-50, -12, 0)),
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(-22, -12, 0)),
+    };
 
     @Override
     public Pose2d getStartPosition() {
-        return startFloorPixel;
+        return startPosition;
     }
 
     @Override
     public AutoPart[] getStartParts() {
-        return floorPixelParts;
-    }
-
-    @Override
-    public AutoPart[] getBackdropParts() {
-        return backdropPixelParts;
+        return startParts;
     }
 }

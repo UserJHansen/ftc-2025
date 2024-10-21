@@ -9,6 +9,7 @@ import com.acmerobotics.roadrunner.localization.Localizer;
 
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.Logging;
 
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -17,7 +18,6 @@ import java.util.TreeMap;
 public class RollbackLocalizer implements Localizer {
     Localizer sourceLocalizer;
 
-    public static double pipelineLatency = 10; // Number of ms of data to rollback
     Map<Long, Pose2d> poseDiffs = new TreeMap<>();
 
     public RollbackLocalizer(Localizer sourceLocalizer) {
@@ -35,22 +35,24 @@ public class RollbackLocalizer implements Localizer {
         this.sourceLocalizer.setPoseEstimate(pose2d);
     }
 
-    public void newDelayedVisionPose(@NonNull Pose2d newPose) {
+    public void newDelayedVisionPose(@NonNull Pose2d newPose, double pipelineLatency) {
         // Reset the location to the new pose then apply the latency worth of diffs
         long currentTime = System.currentTimeMillis();
 
         Pose2d currentPose = newPose;
-
+        ArrayList<Long> deleteTimestamps = new ArrayList<>();
         for (long timeStamp : poseDiffs.keySet()) {
             if (timeStamp + pipelineLatency < currentTime) {
                 // Diff is old, delete it
-                poseDiffs.remove(timeStamp);
+                deleteTimestamps.add(timeStamp);
             } else {
                 // Diff is within the latency window, use it to correct the current location
                 currentPose = currentPose.plus(Objects.requireNonNull(poseDiffs.get(timeStamp)));
             }
         }
-
+        for (long timestamp : deleteTimestamps) {
+            poseDiffs.remove(timestamp);
+        }
         // Apply the new location
         this.setPoseEstimate(currentPose);
     }

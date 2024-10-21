@@ -15,6 +15,7 @@ import static org.firstinspires.ftc.teamcode.drive.DriveConstants.kV;
 import androidx.annotation.NonNull;
 
 import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.canvas.Stroke;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.control.PIDCoefficients;
@@ -43,6 +44,7 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequence;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequenceBuilder;
 import org.firstinspires.ftc.teamcode.trajectorysequence.TrajectorySequenceRunner;
+import org.firstinspires.ftc.teamcode.util.DashboardUtil;
 import org.firstinspires.ftc.teamcode.util.LynxModuleUtil;
 
 import java.util.ArrayList;
@@ -73,7 +75,8 @@ public class SampleMecanumDrive extends MecanumDrive {
     private final List<Integer> lastEncVels = new ArrayList<>();
 
     private final RollbackLocalizer localizer;
-    private final GyroLocalizer actualLocalizer;
+    private final GyroLocalizer gyroLocalizer;
+    private final OTOSLocalizer otosLocalizer;
 
     public SampleMecanumDrive(HardwareMap hardwareMap) {
         super(kV, kA, kStatic, TRACK_WIDTH, TRACK_WIDTH, LATERAL_MULTIPLIER);
@@ -124,8 +127,9 @@ public class SampleMecanumDrive extends MecanumDrive {
         List<Integer> lastTrackingEncPositions = new ArrayList<>();
         List<Integer> lastTrackingEncVels = new ArrayList<>();
 
-        actualLocalizer = new GyroLocalizer(hardwareMap, lastTrackingEncPositions, lastTrackingEncVels);
-        localizer = new RollbackLocalizer(actualLocalizer);
+        gyroLocalizer = new GyroLocalizer(hardwareMap, lastTrackingEncPositions, lastTrackingEncVels);
+        otosLocalizer = new OTOSLocalizer(hardwareMap);
+        localizer = new RollbackLocalizer(gyroLocalizer);
         setLocalizer(localizer);
 
         trajectorySequenceRunner = new TrajectorySequenceRunner(
@@ -146,7 +150,7 @@ public class SampleMecanumDrive extends MecanumDrive {
     }
 
     public List<Double> getTrackingPositions() {
-        return actualLocalizer.getWheelPositions();
+        return gyroLocalizer.getWheelPositions();
     }
 
     public TrajectoryBuilder trajectoryBuilder(Pose2d startPose) {
@@ -210,7 +214,15 @@ public class SampleMecanumDrive extends MecanumDrive {
 
     public void update(TelemetryPacket packet) {
         updatePoseEstimate();
+        packet.fieldOverlay().setStroke("#ff0000");
         DriveSignal signal = trajectorySequenceRunner.update(getPoseEstimate(), getPoseVelocity(), packet);
+        otosLocalizer.update();
+
+        packet.fieldOverlay().setStroke("#00ff00");
+        DashboardUtil.drawRobot(packet.fieldOverlay(), gyroLocalizer.getPoseEstimate());
+        packet.fieldOverlay().setStroke("#0000ff");
+        DashboardUtil.drawRobot(packet.fieldOverlay(), otosLocalizer.getPoseEstimate());
+
         if (signal != null) setDriveSignal(signal);
     }
 

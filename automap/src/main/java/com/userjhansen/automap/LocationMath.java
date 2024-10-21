@@ -1,16 +1,16 @@
 package com.userjhansen.automap;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.Pose2d;
 
 public class LocationMath {
     static public Pose2d getRobotLocationFromRobotPart(Pose2d partFinalLocation, Pose2d robotPartOffset) {
-        double robotRotation = partFinalLocation.getHeading() - robotPartOffset.getHeading();
+        double robotRotation = partFinalLocation.heading.minus(robotPartOffset.heading);
 
-        double rotatedOffsetX = robotPartOffset.getX() * Math.cos(partFinalLocation.getHeading()) + robotPartOffset.getY() * Math.sin(partFinalLocation.getHeading());
-        double rotatedOffsetY = robotPartOffset.getX() * Math.sin(partFinalLocation.getHeading()) - robotPartOffset.getY() * Math.cos(partFinalLocation.getHeading());
+        double rotatedOffsetX = robotPartOffset.position.x * Math.cos(partFinalLocation.heading.real) + robotPartOffset.position.y * Math.sin(partFinalLocation.heading.real);
+        double rotatedOffsetY = robotPartOffset.position.x * Math.sin(partFinalLocation.heading.real) - robotPartOffset.position.y * Math.cos(partFinalLocation.heading.real);
 
-        double robotPartX = partFinalLocation.getX() - rotatedOffsetX;
-        double robotPartY = partFinalLocation.getY() - rotatedOffsetY;
+        double robotPartX = partFinalLocation.position.x - rotatedOffsetX;
+        double robotPartY = partFinalLocation.position.y - rotatedOffsetY;
 
         return new Pose2d(
                 robotPartX,

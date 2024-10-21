@@ -1,13 +1,12 @@
 package com.userjhansen.automap;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.userjhansen.automap.Maps.Map;
 
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 
 public class AutoPart {
     public PartType type;
@@ -51,7 +50,7 @@ public class AutoPart {
 
     public Pose2d modified(double yMult, double headingMult) {
         Pose2d pose = getPose();
-        return new Pose2d(pose.getX(), pose.getY() * yMult, pose.getHeading() * headingMult);
+        return new Pose2d(pose.position.x, pose.position.y * yMult, pose.heading.real * headingMult);
     }
 
     public Pose2d getPose() {
@@ -63,34 +62,13 @@ public class AutoPart {
     }
 
 
-    public static AutoPart[] makeFullAutoList(Map map, boolean isInside) {
+    public static AutoPart[] makeFullAutoList(Map map) {
         ArrayList<AutoPart> parts = new ArrayList<>();
 
         parts.add(new AutoPart(PartType.CHANGE_LIGHT, 0));
         parts.addAll(Arrays.asList(map.getStartParts()));
 
         parts.add(new AutoPart(PartType.CHANGE_LIGHT, 1));
-//        GAME SPECIFIC CODE HERE
-        if (!isInside) {
-            parts.addAll(Arrays.asList(
-                    new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(-32, -11, Math.PI)),
-                    new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(34, -11, Math.PI))
-            ));
-        }
-
-        parts.addAll(Arrays.asList(map.getBackdropParts()));
-
-        parts.add(new AutoPart(PartType.CHANGE_LIGHT, 2));
-//        MORE GAME SPECIFIC STUFF
-        AutoPart[] parkingOutsideParts = new AutoPart[]{
-                new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(48, -11, Math.PI)),
-                new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(60, -11, Math.PI)),
-        };
-        AutoPart[] parkingInsideParts = new AutoPart[]{
-                new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(48, -57, Math.PI)),
-                new AutoPart(PartType.SPLINE_CONSTANT, new Pose2d(60, -60, Math.PI)),
-        };
-        parts.addAll(Arrays.asList(isInside ? parkingInsideParts : parkingOutsideParts));
 
         return parts.toArray(new AutoPart[0]);
     }

@@ -15,7 +15,7 @@ import org.firstinspires.ftc.teamcode.drive.advanced.VisionDetection;
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.LiftArmAssembly;
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.Logging;
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.VisionBase;
-import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.cameras.BackwardCamera;
+import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.cameras.ForwardCamera;
 import org.firstinspires.ftc.teamcode.drive.galahlib.VisionMath;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagMetadata;
@@ -24,12 +24,14 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagMetadata;
 public class Robot {
     public final SampleMecanumDrive driveBase;
     public final LiftArmAssembly liftArmAssembly;
+    public final VisionDetection visionDetection;
 
     public boolean adjustedPose = false;
 
     public Robot(HardwareMap hardwareMap, Boolean auto) {
         driveBase = new SampleMecanumDrive(hardwareMap);
         liftArmAssembly = new LiftArmAssembly(hardwareMap);
+        visionDetection = new VisionDetection(hardwareMap);
 
         driveBase.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         driveBase.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
@@ -48,6 +50,7 @@ public class Robot {
         Canvas fieldOverlay = packet.fieldOverlay();
 
         driveBase.update(packet);
+        visionDetection.update((RollbackLocalizer) driveBase.getLocalizer(), packet);
         liftArmAssembly.update();
 
         AprilTagMetadata[] fieldTags = VisionBase.getFixedTags().getAllTags();
@@ -63,12 +66,6 @@ public class Robot {
             }
 
             fieldOverlay.fillPolygon(xPoints, yPoints);
-        }
-
-        Logging.LOG("# AprilTags Detected", VisionDetection.detections.size());
-        packet.put("ForwardTags", VisionDetection.detections.size());
-        for (AprilTagDetection tag : VisionDetection.detections) {
-            VisionBase.logTagPosition(fieldOverlay, poseEstimate, tag, new BackwardCamera());
         }
 
         // Print pose to telemetry
