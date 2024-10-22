@@ -58,7 +58,7 @@ public class SelectiveIntakeMotor {
         this.sensor = hardwareMap.get(ColorRangeSensor.class,  "intakeColour");
         this.confirmationSensor = hardwareMap.get(Rev2mDistanceSensor.class, "intakeDistance");
 
-        intakeSlides = new Lift(hardwareMap.get(DcMotorEx.class, "intakeSlides"), DcMotor.Direction.REVERSE, new PIDFCoefficients(P_INTAKE, 0, 0, 0));
+        intakeSlides = new Lift(hardwareMap.get(DcMotorEx.class, "intakeSlides"), DcMotor.Direction.REVERSE, P_INTAKE);
         intakeFlip = new ServoToggle(hardwareMap, "intakeFlip", 0.05, 0.35); // up state is off, Down state is on
 
         DigitalChannel leftEndpoint = hardwareMap.get(DigitalChannel.class, "leftIntakeEndpoint");

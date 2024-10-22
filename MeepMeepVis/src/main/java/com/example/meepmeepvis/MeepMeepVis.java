@@ -1,9 +1,13 @@
 package com.example.meepmeepvis;
 
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.Pose2dDual;
+import com.acmerobotics.roadrunner.ProfileParams;
 import com.acmerobotics.roadrunner.Trajectory;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.TrajectoryBuilderParams;
+import com.acmerobotics.roadrunner.TurnConstraints;
 import com.noahbres.meepmeep.MeepMeep;
 import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeBlueDark;
 import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedDark;
@@ -12,6 +16,8 @@ import com.noahbres.meepmeep.roadrunner.DriveShim;
 import com.noahbres.meepmeep.roadrunner.DriveTrainType;
 import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
 
+import com.noahbres.meepmeep.roadrunner.entity.TrajectoryActionStub;
+import com.noahbres.meepmeep.roadrunner.entity.TurnActionStub;
 import com.userjhansen.automap.AutoPart;
 import com.userjhansen.automap.Maps.InsideOne;
 import com.userjhansen.automap.Maps.Map;
@@ -23,17 +29,15 @@ import kotlin.Pair;
 
 public class MeepMeepVis {
 
-    public static TrajectoryActionBuilder addParts(TrajectoryActionBuilder traj, AutoPart[] parts, boolean isRed) {
+    public static TrajectoryActionBuilder addParts(TrajectoryActionBuilder traj, AutoPart[] parts) {
 //        For blue side, multiply all y values by -1 and flip the heading
-        int yMult = isRed ? 1 : -1;
-        int headingMult = isRed ? 1 : -1;
         for (AutoPart part : parts) {
             switch (part.type) {
                 case STRAFE:
-                    traj = traj.strafeTo(part.modified(yMult, headingMult).position);
+                    traj = traj.strafeTo(part.getPose().position);
                     break;
                 case STRAFE_TO:
-                    traj = traj.strafeToLinearHeading(part.modified(yMult, headingMult).position, part.modified(yMult, headingMult).heading);
+                    traj = traj.strafeToLinearHeading(part.getPose().position, part.getPose().heading);
                     break;
                 case TURN:
                     traj = traj.turn(part.value);
@@ -42,13 +46,13 @@ public class MeepMeepVis {
                     traj = traj.waitSeconds(part.value);
                     break;
                 case SPLINE_TO:
-                    traj = traj.splineToSplineHeading(part.modified(yMult, headingMult), part.value * headingMult);
+                    traj = traj.splineToSplineHeading(part.getPose(), part.value);
                     break;
                 case SPLINE_CONSTANT:
-                    traj = traj.splineToConstantHeading(part.modified(yMult, headingMult).position, 0);
+                    traj = traj.splineToConstantHeading(part.getPose().position, part.value);
                     break;
                 case ACTION:
-                    traj = traj.waitSeconds(5);
+                    traj = traj.waitSeconds(2);
                     break;
                 case CHANGE_LIGHT:
                     break;
@@ -58,14 +62,28 @@ public class MeepMeepVis {
     }
 
     public static Action buildTrajectorySequence(DriveShim drive, Map map, boolean isRed) {
-        TrajectoryActionBuilder traj = drive.actionBuilder(
-                new Pose2d(
-                        map.getStartPosition().position.x,
-                        map.getStartPosition().position.y * (isRed ? 1 : -1),
-                        map.getStartPosition().heading.real + (isRed ? 0 : Math.PI))
+        TrajectoryActionBuilder baseTrajBuilder = drive.actionBuilder(
+                new Pose2d(0,0,0)
         );
 
-        traj = addParts(traj, AutoPart.makeFullAutoList(map), isRed);
+        TrajectoryActionBuilder traj = new TrajectoryActionBuilder(
+                TurnActionStub::new,
+                TrajectoryActionStub::new,
+                new TrajectoryBuilderParams(
+                        1e-6,
+                        new ProfileParams(
+                                0.25, 0.1, 1e-2
+                        )
+                ),
+                map.getStartPosition(), 0.0,
+                baseTrajBuilder.getBaseTurnConstraints(), baseTrajBuilder.getBaseVelConstraint(), baseTrajBuilder.getBaseAccelConstraint(),
+                isRed ? pose -> pose
+                        : pose -> new Pose2dDual<>(
+                                pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
+
+        );
+
+        traj = addParts(traj, AutoPart.makeFullAutoList(map));
 
         return traj.build();
     }

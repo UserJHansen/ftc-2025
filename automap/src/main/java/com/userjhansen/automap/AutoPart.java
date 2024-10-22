@@ -48,11 +48,6 @@ public class AutoPart {
         this.value = value;
     }
 
-    public Pose2d modified(double yMult, double headingMult) {
-        Pose2d pose = getPose();
-        return new Pose2d(pose.position.x, pose.position.y * yMult, pose.heading.real * headingMult);
-    }
-
     public Pose2d getPose() {
         if (offset == null) {
             return pose;

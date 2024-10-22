@@ -34,7 +34,7 @@ public class LiftArmAssembly {
     public LiftArmAssembly(HardwareMap hardwareMap) {
         intakeMechanism = new SelectiveIntakeMotor(hardwareMap);
 
-        outtakeSlides = new Lift(hardwareMap.get(DcMotorEx.class, "outtakeSlides"), DcMotor.Direction.REVERSE, new PIDFCoefficients(P_Outake, 0, 0, 0));
+        outtakeSlides = new Lift(hardwareMap.get(DcMotorEx.class, "outtakeSlides"), DcMotor.Direction.REVERSE, P_Outake);
         outtakeGrabber = new ServoMultiState(hardwareMap, "outtakeGrabber", new double[]{0.5, 1}); // Off is off, on is grabbing
         elbow = new ServoMultiState(hardwareMap, "elbow", new double[]{0.15, 1, 0.48, 0}); // Off is intakeTransfer, on is full out, 2 is specimen recieve/store, 3 is deflect for intake
         wrist = new ServoMultiState(hardwareMap, "wrist", new double[]{0.33, 0.15, 0.15, 0.4}); // Off is horizontal, on is vertical, 2 is specimen recieve/store

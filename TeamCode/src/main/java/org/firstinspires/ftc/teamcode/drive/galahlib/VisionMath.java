@@ -1,7 +1,8 @@
 package org.firstinspires.ftc.teamcode.drive.galahlib;
 
-import com.acmerobotics.roadrunner.geometry.Pose2d;
-import com.acmerobotics.roadrunner.geometry.Vector2d;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Rotation2d;
+import com.acmerobotics.roadrunner.Vector2d;
 
 import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -32,7 +33,7 @@ public class VisionMath {
 //            Scale by size
             points[i] = points[i].times(-width);
 //        Rotate
-            points[i] = points[i].rotated(yaw);
+            points[i] = Rotation2d.fromDouble(yaw).times(points[i]);
 //        Translate by x and y
             points[i] = points[i].plus(pos);
         }
@@ -92,11 +93,11 @@ public class VisionMath {
 
 
     public static Pose2d getObjectPose(Pose2d robotPose, AprilTagDetection tag, OpenGLMatrix cameraInRobotFrame) {
-        float robotX = (float) robotPose.getX();
-        float robotY = (float) robotPose.getY();
+        float robotX = (float) robotPose.position.x;
+        float robotY = (float) robotPose.position.y;
         float robotZ = 0;
         OpenGLMatrix robotR = new Orientation(AxesReference.INTRINSIC, AxesOrder.XYZ,
-                AngleUnit.RADIANS, 0, 0, (float) (robotPose.getHeading() - (Math.PI / 2)), 0)
+                AngleUnit.RADIANS, 0, 0, (float) (robotPose.heading.toDouble() - (Math.PI / 2)), 0)
                 .getRotationMatrix();
         OpenGLMatrix robotInField = OpenGLMatrix.identityMatrix()
                 .translated(robotX, robotY, robotZ)

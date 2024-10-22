@@ -3,11 +3,21 @@ package org.firstinspires.ftc.teamcode.drive;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.roadrunner.geometry.Pose2d;
-import com.acmerobotics.roadrunner.localization.Localizer;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Time;
+import com.acmerobotics.roadrunner.Twist2d;
+import com.acmerobotics.roadrunner.Twist2dDual;
+import com.acmerobotics.roadrunner.ftc.DownsampledWriter;
+import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 
+import org.firstinspires.ftc.teamcode.Drawing;
+import org.firstinspires.ftc.teamcode.Localizer;
+import org.firstinspires.ftc.teamcode.SettableLocalizer;
 import org.firstinspires.ftc.teamcode.drive.advanced.subsystems.Logging;
+import org.firstinspires.ftc.teamcode.messages.PoseMessage;
+import org.firstinspires.ftc.teamcode.messages.ThreeDeadWheelInputsMessage;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -15,24 +25,17 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 @Config
-public class RollbackLocalizer implements Localizer {
-    Localizer sourceLocalizer;
+public class RollbackLocalizer implements SettableLocalizer {
+    SettableLocalizer sourceLocalizer;
 
-    Map<Long, Pose2d> poseDiffs = new TreeMap<>();
+    public Pose2d currentPose = new Pose2d(0, 0, 0);
+    public Pose2d oldestPose = new Pose2d(0, 0, 0); // Used in path history drawing
+    Map<Long, Twist2d> poseDiffs = new TreeMap<>();
 
-    public RollbackLocalizer(Localizer sourceLocalizer) {
+    private final DownsampledWriter estimatedPoseWriter = new DownsampledWriter("ESTIMATED_POSE", 50_000_000);
+
+    public RollbackLocalizer(SettableLocalizer sourceLocalizer) {
         this.sourceLocalizer = sourceLocalizer;
-    }
-
-    @NonNull
-    @Override
-    public Pose2d getPoseEstimate() {
-        return this.sourceLocalizer.getPoseEstimate();
-    }
-
-    @Override
-    public void setPoseEstimate(@NonNull Pose2d pose2d) {
-        this.sourceLocalizer.setPoseEstimate(pose2d);
     }
 
     public void newDelayedVisionPose(@NonNull Pose2d newPose, double pipelineLatency) {
@@ -40,6 +43,7 @@ public class RollbackLocalizer implements Localizer {
         long currentTime = System.currentTimeMillis();
 
         Pose2d currentPose = newPose;
+        oldestPose = newPose;
         ArrayList<Long> deleteTimestamps = new ArrayList<>();
         for (long timeStamp : poseDiffs.keySet()) {
             if (timeStamp + pipelineLatency < currentTime) {
@@ -54,30 +58,53 @@ public class RollbackLocalizer implements Localizer {
             poseDiffs.remove(timestamp);
         }
         // Apply the new location
-        this.setPoseEstimate(currentPose);
-    }
-
-    @Nullable
-    @Override
-    public Pose2d getPoseVelocity() {
-        return this.sourceLocalizer.getPoseVelocity();
+        FlightRecorder.write("ROLLBACK_NEW_POSE", new PoseMessage(currentPose));
+        this.setCurrentPose(currentPose);
     }
 
     @Override
-    public void update() {
-        Pose2d previousPose = this.sourceLocalizer.getPoseEstimate();
-        this.sourceLocalizer.update();
-        Pose2d currentPose = this.sourceLocalizer.getPoseEstimate();
-        Pose2d poseDiff = currentPose.minus(previousPose);
+    public void setCurrentPose(Pose2d currentPose) {
+        this.currentPose = currentPose;
+        this.sourceLocalizer.setCurrentPose(currentPose);
+    }
+
+    @Override
+    public Twist2dDual<Time> update() {
+        Twist2dDual<Time> localizerUpdate = this.sourceLocalizer.update();
+        currentPose = currentPose.plus(localizerUpdate.value());
 
         long currentTime = System.currentTimeMillis();
 
         if (poseDiffs.containsKey(currentTime)) {
             Logging.LOG("[ERROR] The main loop is running faster than 1000fps, meaning that the pose diff is losing state");
-
-            poseDiffs.computeIfPresent(currentTime, (k, previousDiff) -> previousDiff.plus(poseDiff));
         } else {
-            poseDiffs.put(currentTime, poseDiff); // New diff for current ms
+            poseDiffs.put(currentTime, localizerUpdate.value()); // New diff for current ms
         }
+
+        estimatedPoseWriter.write(new PoseMessage(currentPose));
+
+        return localizerUpdate;
+    }
+
+    public void drawPoseHistory(Canvas c) {
+        double[] xPoints = new double[poseDiffs.size()];
+        double[] yPoints = new double[poseDiffs.size()];
+
+        int i = 0;
+        Pose2d pose = oldestPose;
+        for (Twist2d diff : poseDiffs.values()) {
+            pose = pose.plus(diff);
+            xPoints[i] = pose.position.x;
+            yPoints[i] = pose.position.y;
+
+            i++;
+        }
+
+        c.setStrokeWidth(1);
+        c.setStroke("#3F51B5");
+        c.strokePolyline(xPoints, yPoints);
+
+        c.setStroke("#3F51B5");
+        Drawing.drawRobot(c, currentPose);
     }
 }
