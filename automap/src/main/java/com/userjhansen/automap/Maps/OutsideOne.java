@@ -36,7 +36,7 @@ public class OutsideOne implements Map {
             new AutoPart(PartType.STRAFE, new Pose2d(0, -50, 0)),
             new AutoPart(PartType.STRAFE, new Pose2d(45, -25, 0)),
             new AutoPart(PartType.STRAFE, new Pose2d(45, -10, 0)),
-            new AutoPart(PartType.STRAFE, new Pose2d(24, -10, 0)),
+            new AutoPart(PartType.STRAFE_TO, new Pose2d(24, -10, 0)),
     };
 
 
