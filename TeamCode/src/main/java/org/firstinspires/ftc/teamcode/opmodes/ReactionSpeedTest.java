@@ -33,6 +33,7 @@ public class ReactionSpeedTest extends LinearOpMode {
         while (!isStarted() && initAction.run(p)) {
             FtcDashboard.getInstance().sendTelemetryPacket(p);
             p = new TelemetryPacket();
+            Logging.update();
         }
 
         while (!isStarted()) {

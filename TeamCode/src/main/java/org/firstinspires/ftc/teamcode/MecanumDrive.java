@@ -34,6 +34,9 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import org.firstinspires.ftc.teamcode.drive.Logging;
+import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
 import org.firstinspires.ftc.teamcode.localization.OTOSLocalizer;
 import org.firstinspires.ftc.teamcode.localization.RollbackLocalizer;
 import org.firstinspires.ftc.teamcode.localization.ThreeDeadWheelLocalizer;
@@ -46,7 +49,19 @@ import java.util.Arrays;
 import java.util.List;
 
 @Config
-public final class MecanumDrive {
+public final class MecanumDrive implements StateLoggable {
+    @Override
+    public void logState(String uniqueName) {
+        Logging.DEBUG(uniqueName+" LEFT_FRONT_POWER", leftFront.getPower());
+        Logging.DEBUG(uniqueName+" LEFT_FRONT_CURRENT", leftFront.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName+" LEFT_BACK_POWER", leftBack.getPower());
+        Logging.DEBUG(uniqueName+" LEFT_BACK_CURRENT", leftBack.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName+" RIGHT_FRONT_POWER", rightFront.getPower());
+        Logging.DEBUG(uniqueName+" RIGHT_FRONT_CURRENT", rightFront.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName+" RIGHT_BACK_POWER", rightBack.getPower());
+        Logging.DEBUG(uniqueName+" RIGHT_BACK_CURRENT", rightBack.getCurrent(CurrentUnit.AMPS));
+    }
+
     public static class Params {
         // IMU orientation
         // TODO: fill in these values based on

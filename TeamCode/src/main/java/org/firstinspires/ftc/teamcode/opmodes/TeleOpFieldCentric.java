@@ -13,6 +13,7 @@ import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.Vector2d;
+import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -23,8 +24,14 @@ import org.firstinspires.ftc.teamcode.drive.PoseStorage;
 import org.firstinspires.ftc.teamcode.drive.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.drive.subsystems.Outtake;
 import org.firstinspires.ftc.teamcode.galahlib.Button;
+import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
+import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable;
+import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction;
+import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential;
 import org.firstinspires.ftc.teamcode.galahlib.actions.doWhile;
+import org.firstinspires.ftc.teamcode.galahlib.actions.race;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
+import org.firstinspires.ftc.teamcode.messages.StringMessage;
 
 import java.util.List;
 
@@ -72,6 +79,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
         while (!isStarted() && initAction.run(p)) {
             FtcDashboard.getInstance().sendTelemetryPacket(p);
             p = new TelemetryPacket();
+            Logging.update();
         }
 
         while (!isStarted()) {
@@ -85,50 +93,62 @@ public class TeleOpFieldCentric extends LinearOpMode {
             module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
 
-        Action driveAction = null;
-        Action sampleAction = null;
+        LoggableAction driveAction = null;
+        LoggableAction sampleAction = null;
         SampleState sampleState = SampleState.Waiting;
 
         while (opModeIsActive() && !isStopRequested()) {
             p = new TelemetryPacket();
-            Pose2d poseEstimate = driveBase.localizer.currentPose;
-            // Create a vector from the gamepad x/y inputs
-            // Then, rotate that vector by the inverse of that heading
-            Vector2d input = new Vector2d(
-                    -gamepad1.left_stick_y,
-                    -gamepad1.left_stick_x
-            ).times(slowMode.val ? SlowmodeSpeed : 1);
-
-            if (fieldMode.val) {
-                input = poseEstimate.heading.inverse().times(input);
-            }
-
-            if (inverted.val) {
-                input = Rotation2d.fromDouble(Math.PI).times(input);
-            }
-
-            PoseVelocity2d drivePower = new PoseVelocity2d(
-                    input,
-                    -gamepad1.right_stick_x * (slowMode.val ? SlowmodeTurning : 1)
-            );
-
-            Logging.DEBUG("X Input", input.x);
-            Logging.DEBUG("Y Input", input.y);
 
             slowMode.update(gamepad1.b);
             fieldMode.update(gamepad1.x);
             inverted.update(gamepad1.y);
 
+            driveBase.update(p);
             visionDetection.update(driveBase.localizer, p);
 
             if (driveAction != null && !driveAction.run(p)) {
                 driveAction = null;
-            };
-            if (sampleAction != null && !sampleAction.run(p)) {
-                sampleAction = null;
-            };
+            } else if (driveAction == null) {
+                Pose2d poseEstimate = driveBase.localizer.currentPose;
+                // Create a vector from the gamepad x/y inputs
+                // Then, rotate that vector by the inverse of that heading
+                Vector2d input = new Vector2d(
+                        -gamepad1.left_stick_y,
+                        -gamepad1.left_stick_x
+                ).times(slowMode.val ? SlowmodeSpeed : 1);
 
-            if (specimenReady.update(gamepad1.a) && sampleAction == null) {
+                if (fieldMode.val) {
+                    input = poseEstimate.heading.inverse().times(input);
+                }
+
+                if (inverted.val) {
+                    input = Rotation2d.fromDouble(Math.PI).times(input);
+                }
+
+                PoseVelocity2d drivePower = new PoseVelocity2d(
+                        input,
+                        -gamepad1.right_stick_x * (slowMode.val ? SlowmodeTurning : 1)
+                );
+
+                Logging.DEBUG("X Input", input.x);
+                Logging.DEBUG("Y Input", input.y);
+
+                // Pass in the rotated input + right stick value for rotation
+                // Rotation is not part of the rotated input thus must be passed in separately
+                driveBase.setDrivePowers(drivePower);
+            }
+
+
+            if (sampleAction != null) {
+                Logging.DEBUG("SAMPLE_ACTION", sampleAction.getName());
+                if (!sampleAction.run(p)) {
+                    Logging.LOG("SAMPLE_ACTION_FINISHED");
+                    sampleAction = null;
+                }
+            }
+
+            if (specimenReady.update(gamepad1.a) && sampleAction == null && sampleState == SampleState.Waiting) {
                 sampleAction = outtake.specimenReady();
                 sampleState = SampleState.SpecimenWait;
             }
@@ -136,28 +156,33 @@ public class TeleOpFieldCentric extends LinearOpMode {
             if (progressSample.update(gamepad1.right_bumper) && sampleAction == null) {
                 switch (sampleState) {
                     case Waiting:
-                        sampleAction = new SequentialAction(
+                        Logging.LOG("Running capture sequence");
+                        sampleAction = new LoggingSequential(
+                                "INTAKE_CAPTURE",
                                 intake.captureSample(),
                                 outtake.readyForTransfer(),
-                                new doWhile(
+                                new Loggable("WAIT_FOR_TRANSFER", new race(
                                     intake.transfer(),
                                     outtake.waitForTransfer()
-                                ),
+                                )),
                                 intake.stopTransfer(),
                                 outtake.pickupInternalSample()
                         );
                         sampleState = SampleState.Intaking;
                         break;
                     case Intaking:
+                        Logging.LOG("Running deploy sequence");
                         sampleAction = outtake.topBasket();
                         sampleState = SampleState.Outtaking;
                         break;
                     case Outtaking:
+                        Logging.LOG("Running drop sequence");
                         sampleAction = outtake.dropSample();
                         sampleState = SampleState.Waiting;
                         break;
 
                     case SpecimenWait:
+                        Logging.LOG("Running specimen grab sequence");
                         sampleAction = outtake.grabSpecimen();
                         sampleState = SampleState.SpecimenIntake;
                         break;
@@ -165,6 +190,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                     case SpecimenIntake:
                         sampleAction = outtake.placeSpecimen();
                         sampleState = SampleState.Waiting;
+                        break;
                 }
             }
 
@@ -172,13 +198,14 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 switch (sampleState) {
                     case Waiting: // Probably a false grab?
                         if (sampleAction != null) {
-                            sampleAction = new SequentialAction(
+                            sampleAction = new LoggingSequential(
+                                    "INTAKE_CAPTURE",
                                     intake.captureSample(),
                                     outtake.readyForTransfer(),
-                                    new doWhile(
+                                    new Loggable("WAIT_FOR_TRANSFER", new race(
                                             intake.transfer(),
                                             outtake.waitForTransfer()
-                                    ),
+                                    )),
                                     intake.stopTransfer(),
                                     outtake.pickupInternalSample()
                             );
@@ -193,13 +220,13 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 }
             }
 
-            // Pass in the rotated input + right stick value for rotation
-            // Rotation is not part of the rotated input thus must be passed in separately
-            driveBase.setDrivePowers(drivePower);
-
             for (LynxModule module : allHubs) {
                 module.clearBulkCache();
             }
+            driveBase.logState("[TELEOP]");
+            intake.logState("[TELEOP]");
+            outtake.logState("[TELEOP]");
+            Logging.update();
             FtcDashboard.getInstance().sendTelemetryPacket(p);
         }
     }

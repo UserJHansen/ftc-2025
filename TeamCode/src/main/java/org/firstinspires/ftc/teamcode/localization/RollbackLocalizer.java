@@ -13,6 +13,7 @@ import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 import org.firstinspires.ftc.teamcode.Drawing;
 import org.firstinspires.ftc.teamcode.drive.Logging;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
+import org.firstinspires.ftc.teamcode.messages.RollbackPoseMessage;
 
 import java.util.ArrayList;
 import java.util.Map;
@@ -52,7 +53,7 @@ public class RollbackLocalizer implements SettableLocalizer {
             poseDiffs.remove(timestamp);
         }
         // Apply the new location
-        FlightRecorder.write("ROLLBACK_NEW_POSE", new PoseMessage(currentPose));
+        FlightRecorder.write("ROLLBACK_NEW_POSE", new RollbackPoseMessage(currentPose, pipelineLatency));
         this.setCurrentPose(currentPose);
     }
 

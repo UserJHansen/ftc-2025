@@ -26,9 +26,12 @@ public class VisionDetection {
     public void update(RollbackLocalizer localizer, TelemetryPacket packet) {
         iteration += 1;
 
-        if (iteration % 20 == 0) { // Every 20 cycles
-            LLStatus status = limelight.getStatus();
+        if (iteration % 20 == 0) {
             limelight.updateRobotOrientation(localizer.currentPose.heading.toDouble());
+        }
+
+        if (iteration % 200 == 0) {
+            LLStatus status = limelight.getStatus();
             Logging.LOG("(limelight) Temp", status.getTemp());
             Logging.LOG("(limelight) CPU", status.getCpu());
             Logging.LOG("(limelight) FPS", status.getFps());
