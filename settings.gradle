@@ -1,6 +1,4 @@
 include ':FtcRobotController'
 include ':TeamCode'
 include ':MeepMeepVis'
-include ':VisionKit'
-include ':VisionKitVis'
 include ':automap'
