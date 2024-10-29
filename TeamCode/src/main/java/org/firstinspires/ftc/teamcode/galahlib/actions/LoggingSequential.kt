@@ -8,7 +8,7 @@ class LoggingSequential(val baseName: String, val initialActions: List<LoggableA
     private var actions = initialActions
 
     override val name: String
-        get() = "[$baseName] ${actions.first().name}"
+        get() = "[$baseName] ${if (actions.isNotEmpty()) actions.first().name else "FINISHED"}"
 
     constructor(name: String, vararg actions: LoggableAction) : this(name, actions.asList())
 
@@ -21,7 +21,9 @@ class LoggingSequential(val baseName: String, val initialActions: List<LoggableA
             Logging.LOG("${baseName}_STATE", actions.first().name);
             true
         } else {
-            Logging.LOG("${name}_FINISHED");
+            if (!name.contains("_FINISHED")) {
+                Logging.LOG("${name}_FINISHED");
+            }
             actions = actions.drop(1)
             run(p)
         }

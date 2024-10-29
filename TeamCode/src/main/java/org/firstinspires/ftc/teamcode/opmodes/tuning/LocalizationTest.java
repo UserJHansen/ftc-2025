@@ -8,13 +8,14 @@ import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-import org.firstinspires.ftc.teamcode.Drawing;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.drive.Logging;
 
 public class LocalizationTest extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+        Logging.telemetry = telemetry;
 
         if (TuningOpModes.DRIVE_CLASS.equals(MecanumDrive.class)) {
             MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
@@ -30,16 +31,11 @@ public class LocalizationTest extends LinearOpMode {
                         -gamepad1.right_stick_x
                 ));
 
-                drive.updatePoseEstimate();
-
-                telemetry.addData("x", drive.localizer.currentPose.position.x);
-                telemetry.addData("y", drive.localizer.currentPose.position.y);
-                telemetry.addData("heading (deg)", Math.toDegrees(drive.localizer.currentPose.heading.toDouble()));
-                telemetry.update();
-
                 TelemetryPacket packet = new TelemetryPacket();
-                packet.fieldOverlay().setStroke("#3F51B5");
-                Drawing.drawRobot(packet.fieldOverlay(), drive.localizer.currentPose);
+                drive.update(packet);
+
+                Logging.update();
+
                 FtcDashboard.getInstance().sendTelemetryPacket(packet);
             }
         } else {

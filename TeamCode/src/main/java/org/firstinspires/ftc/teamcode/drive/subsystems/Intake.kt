@@ -36,14 +36,14 @@ import kotlin.math.max
 @Config
 class Intake(hardwareMap: HardwareMap) : StateLoggable {
     class Params {
-        @JvmField var P_Intake: Double = 6.0
+        @JvmField var P_Intake: Double = 3.0
 
         @JvmField var speed = -0.53
-        @JvmField var transferSpeed = -0.4
+        @JvmField var transferSpeed = 0.7
         @JvmField var captureTimeout = 750L
 
         @JvmField var currentTrigger = 0.5
-        @JvmField var currentTriggerSpeed = -0.3
+        @JvmField var currentTriggerSpeed = -0.4
 
         @JvmField var minExtension = 5.0
         @JvmField var maxExtension = 11.0
@@ -51,7 +51,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
 
         class FlipLimits {
             @JvmField var downPosition = 0.25
-            @JvmField var upPosition = 0.00
+            @JvmField var upPosition = 0.03
         }
         @JvmField val flipLimits = FlipLimits()
     }
@@ -60,11 +60,11 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         val PARAMS = Params()
     }
 
-    val slides = Lift(hardwareMap, "intakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Intake)
+    val slides = Lift(hardwareMap, "intakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Intake, 85.935483871)
     val leftEndpoint = DigitalInput(hardwareMap, "intakeLeft")
     val rightEndpoint = DigitalInput(hardwareMap, "intakeRight")
 
-    val flipServo = ServoToggle(hardwareMap, "intakeFlip", PARAMS.flipLimits.downPosition, PARAMS.flipLimits.upPosition, 1.17)
+    val flipServo = ServoToggle(hardwareMap, "intakeFlip", PARAMS.flipLimits.upPosition, PARAMS.flipLimits.downPosition, 1.17)
     val motor = hardwareMap.get(DcMotorEx::class.java, "intake")
     val colorSensor = hardwareMap.get(RevColorSensorV3::class.java, "intakeColour")
     val distanceSensor = hardwareMap.get(Rev2mDistanceSensor::class.java, "intakeDistance")
@@ -73,7 +73,6 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         FlightRecorder.write("INTAKE_PARAMS", PARAMS)
         motor.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
     }
-    private val intakeActionWriter = DownsampledWriter("INTAKE_ACTION", 50_000_000)
 
     val sampleType: SampleType get() {
         val color = this.colorSensor.normalizedColors
@@ -101,7 +100,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         return frontTriggered || backTriggered
     }
     val backTriggered: Boolean get() {
-        return distanceSensor.getDistance(DistanceUnit.MM) < 60
+        return distanceSensor.getDistance(DistanceUnit.MM) < 20
     }
 
     fun resetSlides(): LoggableAction {
@@ -123,17 +122,26 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     fun crawlForward(extendTime: Double = PARAMS.extendTime): LoggableAction {
-        intakeActionWriter.write(StringMessage("CRAWL_FORWARD"))
-        return Loggable("CRAWL_FORWARD_INTAKE", slides.slideBetween(PARAMS.minExtension, PARAMS.maxExtension, extendTime))
+        return Loggable("CRAWL_FORWARD_INTAKE", ParallelAction(
+            InstantAction {
+                Logging.LOG("CRAWL_FORWARD")
+            },
+            slides.slideBetween(PARAMS.minExtension, PARAMS.maxExtension, extendTime)
+        ))
     }
 
     fun pickSample(): LoggableAction {
-        intakeActionWriter.write(StringMessage("PICK_SAMPLE"))
         return object : LoggableAction {
             var captureTimeout: Deadline? = null
             override val name: String
                 get() = "PICKING_SAMPLE_${if (captureTimeout == null) "SEARCHING" else "WAITING"}"
+            var initialized = false
             override fun run(p: TelemetryPacket): Boolean {
+                if (!initialized) {
+                    Logging.LOG("PICK_SAMPLE")
+                    initialized = true
+                }
+
                 val currentSample = sampleType
                 val allianceColor =
                     if (PoseStorage.isRedAlliance) SampleType.Red else SampleType.Blue
@@ -143,7 +151,8 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                     motor.power = PARAMS.speed
                 } else if (currentSample == allianceColor || currentSample == SampleType.Shared) { // Good Sample
                     if (backTriggered) {
-                        captureTimeout = Deadline(PARAMS.captureTimeout, TimeUnit.MILLISECONDS)
+                        if (captureTimeout == null)
+                            captureTimeout = Deadline(PARAMS.captureTimeout, TimeUnit.MILLISECONDS)
                         motor.power = 0.0
                     } else if (motor.getCurrent(CurrentUnit.AMPS) < PARAMS.currentTrigger) {
                         motor.power = PARAMS.currentTriggerSpeed
@@ -159,15 +168,17 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     fun retractSlides(): LoggableAction {
-        intakeActionWriter.write(StringMessage("RETRACT_SLIDES"))
         return Loggable("RETRACT_FLIP_INTAKE", ParallelAction(
+            InstantAction {Logging.LOG("RETRACT_SLIDES")},
             slides.gotoDistance(0.0),
+            InstantAction {
+                motor.power = 0.2
+            },
             flipServo.setPosition(false)
         ))
     }
 
     fun transfer(): LoggableAction {
-        intakeActionWriter.write(StringMessage("TRANSFER"))
         return object : LoggableAction {
             var initialized = false
 
@@ -175,6 +186,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                 get() = "INTAKE_TRANSFER"
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
+                    Logging.LOG("TRANSFER")
                     motor.power = PARAMS.transferSpeed
                     initialized = true
                 }
@@ -185,8 +197,8 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     fun stopTransfer(): LoggableAction {
-        intakeActionWriter.write(StringMessage("STOP_TRANSFER"))
         return Loggable("STOP_TRANSFER_MOTOR", InstantAction {
+            Logging.LOG("STOP_TRANSFER")
             motor.power = 0.0
         })
     }
@@ -216,5 +228,13 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         slides.logState("$uniqueName [INTAKE_SLIDES]")
         Logging.DEBUG("$uniqueName INTAKE_POWER", motor.power)
         Logging.DEBUG("$uniqueName INTAKE_CURRENT", motor.getCurrent(CurrentUnit.AMPS))
+    }
+
+    fun lockout() {
+        slides.lockout()
+    }
+
+    fun unlock() {
+        slides.unlock()
     }
 }

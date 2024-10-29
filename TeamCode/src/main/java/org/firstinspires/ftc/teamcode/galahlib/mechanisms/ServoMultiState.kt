@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.galahlib.mechanisms
 
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.NullAction
 import com.acmerobotics.roadrunner.SleepAction
@@ -15,7 +16,13 @@ import kotlin.math.abs
 // - GoBilda High Torque servo: 1.17
 // - GoBilda Super speed servo: 0.45
 // - REV SRS: 1.1 (This is the max, if you've set smaller limits in hardware lower this number
-class ServoMultiState(hardwareMap: HardwareMap, name: String, val states: DoubleArray, val fullRotationTime: Double, var currentState: Int = 0) {
+class ServoMultiState(
+    hardwareMap: HardwareMap,
+    name: String,
+    val states: DoubleArray,
+    val fullRotationTime: Double,
+    var currentState: Int = 0
+) {
     val servo = hardwareMap.get(Servo::class.java, name)
 
     init {
@@ -23,12 +30,24 @@ class ServoMultiState(hardwareMap: HardwareMap, name: String, val states: Double
     }
 
     fun setPosition(newState: Int): Action {
-        if (newState == currentState) return NullAction()
-        else {
-            val transitionTime = abs(states[currentState]-states[newState]) * fullRotationTime
-            currentState = newState
-            servo.position = states[currentState]
-            return SleepAction(transitionTime)
+        return object : Action {
+            var initialized = false
+            var sleepAction: Action? = null
+            override fun run(p: TelemetryPacket): Boolean {
+                if (!initialized) {
+                    initialized = true
+                    if (currentState == newState) return false
+
+                    val transitionTime =
+                        abs(states[currentState] - states[newState]) * fullRotationTime
+
+                    currentState = newState
+                    servo.position = states[currentState]
+                    sleepAction = SleepAction(transitionTime)
+                }
+
+                return sleepAction?.run(p) != false
+            }
         }
     }
 }

@@ -37,6 +37,7 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.drive.Logging;
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
+import org.firstinspires.ftc.teamcode.localization.FuseLocation;
 import org.firstinspires.ftc.teamcode.localization.OTOSLocalizer;
 import org.firstinspires.ftc.teamcode.localization.RollbackLocalizer;
 import org.firstinspires.ftc.teamcode.localization.ThreeDeadWheelLocalizer;
@@ -72,14 +73,14 @@ public final class MecanumDrive implements StateLoggable {
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
         // drive model parameters
-        public double inPerTick = 1;
+        public double inPerTick = 0.0005312812;
         public double lateralInPerTick = inPerTick;
-        public double trackWidthTicks = 0;
+        public double trackWidthTicks = 25397.29475119775;
 
         // feedforward parameters (in tick units)
-        public double kS = 0;
-        public double kV = 0;
-        public double kA = 0;
+        public double kS = 2.0;
+        public double kV = 0.00008509325142164417;
+        public double kA = 0.00002;
 
         // path profile parameters (in inches)
         public double maxWheelVel = 50;
@@ -91,9 +92,9 @@ public final class MecanumDrive implements StateLoggable {
         public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 0.0;
-        public double lateralGain = 0.0;
-        public double headingGain = 0.0; // shared with turn
+        public double axialGain = 2.0;
+        public double lateralGain = 5.0;
+        public double headingGain = 5.0; // shared with turn
 
         public double axialVelGain = 0.0;
         public double lateralVelGain = 0.0;
@@ -122,6 +123,7 @@ public final class MecanumDrive implements StateLoggable {
     public final LazyImu lazyImu;
 
     public final RollbackLocalizer localizer;
+    public final FuseLocation fusedLocation;
     public final ThreeDeadWheelLocalizer deadWheelLocalizer;
     public final OTOSLocalizer otosLocalizer;
 
@@ -164,7 +166,8 @@ public final class MecanumDrive implements StateLoggable {
 
         deadWheelLocalizer = new ThreeDeadWheelLocalizer(hardwareMap, PARAMS.inPerTick);
         otosLocalizer = new OTOSLocalizer(hardwareMap);
-        localizer = new RollbackLocalizer(otosLocalizer);
+        fusedLocation = new FuseLocation(otosLocalizer, deadWheelLocalizer);
+        localizer = new RollbackLocalizer(fusedLocation);
         this.localizer.setCurrentPose(pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
@@ -189,6 +192,14 @@ public final class MecanumDrive implements StateLoggable {
         PoseVelocity2d velocity = updatePoseEstimate();
 
         localizer.drawPoseHistory(p.fieldOverlay());
+
+        Canvas c = p.fieldOverlay();
+        c.setStroke("#B53FA8");
+        Drawing.drawRobot(c, fusedLocation.getOtosPose());
+
+        c.setStroke("#3F89B5");
+        Drawing.drawRobot(c, fusedLocation.getThreeWheelPose());
+
         p.put("x", localizer.currentPose.position.x);
         p.put("y", localizer.currentPose.position.y);
         p.put("heading (deg)", Math.toDegrees(localizer.currentPose.heading.toDouble()));

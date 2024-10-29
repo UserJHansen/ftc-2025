@@ -17,9 +17,17 @@ import org.firstinspires.ftc.teamcode.messages.PoseMessage;
 
 @Config
 public class OTOSLocalizer implements SettableLocalizer {
-    public static Pose2d offset = new Pose2d(0, 0, Math.toRadians(180));
-    public static double linearScalar = 1.0;
-    public static double angularScalar = 1.0;
+    public static Double offsetX = -0.505;
+    public static Double offsetY = 0.2;
+    // Average of 3 calibration runs:
+    // Detected: 113.5293 Actual: 114.4882
+    // Detected: 119.7631 Actual: 118.1102
+    // Detected: 116.9569 Actual: 118.7008
+    // = (1.0084462777 + 0.986198587 + 1.0149106209)/3
+    public static double linearScalar = 1.0031851619;
+    // Was off by 31 degrees after 10 rotations
+    // 3600 / 3631 = 0.9914624071
+    public static double angularScalar = 0.9914624071;
 
     SparkFunOTOS otos;
 
@@ -33,7 +41,7 @@ public class OTOSLocalizer implements SettableLocalizer {
         otos.setLinearUnit(DistanceUnit.INCH);
         otos.setAngularUnit(AngleUnit.RADIANS);
 
-        otos.setOffset(RRPoseToOTOSPose(offset));
+        otos.setOffset(RRPoseToOTOSPose(new Pose2d(offsetX, offsetY, 0)));
         otos.setLinearScalar(linearScalar);
         otos.setAngularScalar(angularScalar);
 
@@ -51,6 +59,7 @@ public class OTOSLocalizer implements SettableLocalizer {
 
     @Override
     public void setCurrentPose(Pose2d pose) {
+        lastPose = pose;
         otos.setPosition(RRPoseToOTOSPose(pose));
     }
 
@@ -62,7 +71,7 @@ public class OTOSLocalizer implements SettableLocalizer {
         SparkFunOTOS.Pose2D otosAcc = new SparkFunOTOS.Pose2D();
         otos.getPosVelAcc(otosPose,otosVel,otosAcc);
         Pose2d pose = OTOSPoseToRRPose(otosPose);
-        Twist2d poseDifference = lastPose.minus(pose);
+        Twist2d poseDifference = pose.minus(lastPose);
         lastPose = pose;
 
         FlightRecorder.write("OTOS_NEW_POSE", new PoseMessage(pose));

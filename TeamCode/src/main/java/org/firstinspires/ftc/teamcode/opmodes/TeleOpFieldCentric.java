@@ -11,9 +11,8 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Rotation2d;
-import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -24,14 +23,11 @@ import org.firstinspires.ftc.teamcode.drive.PoseStorage;
 import org.firstinspires.ftc.teamcode.drive.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.drive.subsystems.Outtake;
 import org.firstinspires.ftc.teamcode.galahlib.Button;
-import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential;
-import org.firstinspires.ftc.teamcode.galahlib.actions.doWhile;
-import org.firstinspires.ftc.teamcode.galahlib.actions.race;
+import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
-import org.firstinspires.ftc.teamcode.messages.StringMessage;
 
 import java.util.List;
 
@@ -82,8 +78,15 @@ public class TeleOpFieldCentric extends LinearOpMode {
             Logging.update();
         }
 
+        intake.lockout();
+        outtake.lockout();
+
         while (!isStarted()) {
-            sleep(10);
+            p = new TelemetryPacket();
+            driveBase.update(p);
+            visionDetection.update(driveBase.localizer, p);
+            Logging.update();
+            FtcDashboard.getInstance().sendTelemetryPacket(p);
         }
 
         if (isStopRequested()) return;
@@ -96,6 +99,9 @@ public class TeleOpFieldCentric extends LinearOpMode {
         LoggableAction driveAction = null;
         LoggableAction sampleAction = null;
         SampleState sampleState = SampleState.Waiting;
+
+        intake.unlock();
+        outtake.unlock();
 
         while (opModeIsActive() && !isStopRequested()) {
             p = new TelemetryPacket();
@@ -139,7 +145,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 driveBase.setDrivePowers(drivePower);
             }
 
-
+            Logging.LOG("SAMPLE_STATE", sampleState);
             if (sampleAction != null) {
                 Logging.DEBUG("SAMPLE_ACTION", sampleAction.getName());
                 if (!sampleAction.run(p)) {
@@ -161,10 +167,11 @@ public class TeleOpFieldCentric extends LinearOpMode {
                                 "INTAKE_CAPTURE",
                                 intake.captureSample(),
                                 outtake.readyForTransfer(),
-                                new Loggable("WAIT_FOR_TRANSFER", new race(
-                                    intake.transfer(),
-                                    outtake.waitForTransfer()
-                                )),
+                                new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
+                                        intake.transfer(),
+                                        outtake.waitForTransfer(),
+                                        new SleepAction(0.75)
+                                )), 3.0),
                                 intake.stopTransfer(),
                                 outtake.pickupInternalSample()
                         );
@@ -197,25 +204,26 @@ public class TeleOpFieldCentric extends LinearOpMode {
             if (indicateFailure.update(gamepad1.left_bumper)) {
                 switch (sampleState) {
                     case Waiting: // Probably a false grab?
-                        if (sampleAction != null) {
-                            sampleAction = new LoggingSequential(
-                                    "INTAKE_CAPTURE",
-                                    intake.captureSample(),
-                                    outtake.readyForTransfer(),
-                                    new Loggable("WAIT_FOR_TRANSFER", new race(
-                                            intake.transfer(),
-                                            outtake.waitForTransfer()
-                                    )),
-                                    intake.stopTransfer(),
-                                    outtake.pickupInternalSample()
-                            );
-                        }
+                    case Intaking:
+                        sampleAction = new LoggingSequential(
+                                "INTAKE_CAPTURE",
+                                intake.captureSample(),
+                                outtake.readyForTransfer(),
+                                new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
+                                        intake.transfer(),
+                                        outtake.waitForTransfer(),
+                                        new SleepAction(0.75)
+                                )), 3.0),
+                                intake.stopTransfer(),
+                                outtake.pickupInternalSample()
+                        );
                         break;
                     case SpecimenWait:
                         sampleAction = outtake.abortSpecimen();
                         break;
                     case SpecimenIntake: // False grab also probably
-                        sampleAction = outtake.grabSpecimen();
+                        sampleAction = outtake.retryGrabSpecimen();
+                        sampleState = SampleState.SpecimenWait;
                         break;
                 }
             }

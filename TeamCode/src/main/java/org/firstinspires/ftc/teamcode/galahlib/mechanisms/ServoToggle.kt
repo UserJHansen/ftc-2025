@@ -2,7 +2,8 @@ package org.firstinspires.ftc.teamcode.galahlib.mechanisms
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
-import com.acmerobotics.roadrunner.NullAction
+import com.acmerobotics.roadrunner.InstantAction
+import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.SleepAction
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.hardware.Servo
@@ -26,11 +27,25 @@ class ServoToggle(hardwareMap: HardwareMap, name: String, val off: Double, val o
     }
 
     fun setPosition(newState: Boolean): Action {
-        if (newState == currentState) return NullAction()
-        else {
+        return object : Action {
+            var initialized = false
+            var sleepAction: Action? = null
+            override fun run(p: TelemetryPacket): Boolean {
+                if (!initialized) {
+                    initialized = true
+                    if (currentState == newState) return false
+
+                    currentState = newState
+                    servo.position = if (newState) on else off
+                    sleepAction = SleepAction(transitionTime)
+                }
+
+                return sleepAction?.run(p) != false
+            }
+        }
+        return SequentialAction(InstantAction {
             currentState = newState
             servo.position = if (newState) on else off
-            return SleepAction(transitionTime)
-        }
+        },SleepAction(transitionTime))
     }
 }

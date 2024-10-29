@@ -186,9 +186,13 @@ def plot_timeline(timeline, timeline_events):
         # Plot each data field over time
         for field in entries[timestamps[0]].keys():
             values = [entries[t][field] for t in timestamps]
+            i = 0
             for timestamp, labels in timeline_events.items():
-                plt.annotate(", ".join(labels), (timestamp, 1),
+                # HORRIBLE BAD BAD O(n), Could be O(log n) since it's sorted but eh
+                plt.annotate(", ".join(labels), (timestamp, entries[min(timestamps, key=lambda x:abs(x-timestamp))][field]), 
+                            xytext=(2, 0), textcoords="offset fontsize",
                             arrowprops=dict(arrowstyle='-|>'))
+                i+=1
 
             plt.plot(timestamps, values, label=field)
         plt.title(f"Channel: {ch} (Timestamped Data)")
@@ -250,8 +254,21 @@ if __name__ == '__main__':
             schemas, messages = read_file(f)
 
     filterchannels = sys.argv[2:] if len(sys.argv) > 2 else [ch for ch in schemas.keys()]
-    schemas = dict((k, v) for k, v in schemas.items() if k in filterchannels)
-    messages = dict((k, v) for k, v in messages.items() if k in filterchannels)
+    block_channels = ["FINISHED_FINISHED","THREE_DEAD_WHEEL_INPUTS"]
+    channel_names = set()
+
+    for name in schemas.keys():
+        for key in filterchannels:
+            if key in name:
+                blocked = len([block for block in block_channels if block in name]) > 0
+                if not blocked:
+                    channel_names.add(name)
+
+    print(channel_names)
+
+
+    schemas = dict((k, v) for k, v in schemas.items() if k in channel_names)
+    messages = dict((k, v) for k, v in messages.items() if k in channel_names)
     
     for ch, schema in schemas.items():
         print(f'Channel: {ch} ({len(messages[ch])} messages)\n  {schema}')
@@ -260,6 +277,7 @@ if __name__ == '__main__':
 
     # Print config data
     print("Config Data:", config)
+    print(timeline)
 
     # Plot timeline and line graphs
     plt.ion()

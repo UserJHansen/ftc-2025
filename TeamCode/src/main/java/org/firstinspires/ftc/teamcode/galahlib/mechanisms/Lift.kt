@@ -3,6 +3,9 @@ package org.firstinspires.ftc.teamcode.galahlib.mechanisms
 import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
+import com.acmerobotics.roadrunner.InstantAction
+import com.acmerobotics.roadrunner.SequentialAction
+import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter
 import com.acmerobotics.roadrunner.ftc.FlightRecorder
 import com.qualcomm.robotcore.hardware.DcMotor
@@ -56,10 +59,17 @@ class Lift @JvmOverloads constructor(
     private val liftPoseWriter = DownsampledWriter("LIFT_POSITION", 50_000_000)
 
     fun resetPosition(resetCondition: Action): LoggableAction {
-        liftActionWriter.write(StringMessage("RESET_POSITION_START"))
+        liftActionWriter.write(StringMessage("$lastName RESET_POSITION_START"))
         return object : LoggableAction {
-                var initialized = false
-                var endpointTimeout = Deadline(2, TimeUnit.SECONDS)
+            var initialized = false
+            var endpointTimeout = Deadline(2, TimeUnit.SECONDS)
+            val resetAction = SequentialAction(
+                resetCondition,
+                InstantAction {
+                    liftMotor.power = 0.0
+                },
+                SleepAction(0.1)
+            )
             override val name: String
                 get() = "RESET_POSITION"
                 override fun run(p: TelemetryPacket): Boolean {
@@ -70,9 +80,9 @@ class Lift @JvmOverloads constructor(
                         initialized = true
                     }
 
-                    if (endpointTimeout.hasExpired() || !resetCondition.run(p)) {
-                        liftActionWriter.write(StringMessage("POSITION_RESET"))
-                        FlightRecorder.write("RESET_TIMEOUT", BooleanMessage(endpointTimeout.hasExpired()))
+                    if (endpointTimeout.hasExpired() || !resetAction.run(p)) {
+                        liftActionWriter.write(StringMessage("$lastName POSITION_RESET"))
+                        FlightRecorder.write("$lastName RESET_TIMEOUT", BooleanMessage(endpointTimeout.hasExpired()))
                         liftPoseWriter.write(DoubleMessage(0.0))
 
                         initMotor()
@@ -89,17 +99,16 @@ class Lift @JvmOverloads constructor(
     }
 
     fun gotoDistance(distance: Double): LoggableAction {
-        targetDistance = if (distance != 0.0) distance else tolerance
-        liftActionWriter.write(StringMessage("GOTO_DISTANCE"))
-
-
         return object : LoggableAction {
             override val name: String
-                get() = "GOTO_DISTANCE_$targetDistance"
+                get() = "$lastName GOTO_DISTANCE_$targetDistance"
             var initialized = false
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
-                    liftMotor.targetPosition = ((targetDistance + 0.1) * ticksPerInch).toInt()
+                    targetDistance = if (distance != 0.0) distance else tolerance
+                    liftActionWriter.write(StringMessage("$lastName GOTO_DISTANCE"))
+
+                    liftMotor.targetPosition = (targetDistance * ticksPerInch).toInt()
                     initialized = true
                 }
 
@@ -110,10 +119,15 @@ class Lift @JvmOverloads constructor(
     }
 
     fun slideBetween(startPosition: Double, endPosition: Double, time: Double, units: TimeUnit = TimeUnit.SECONDS): Action {
-        liftActionWriter.write(StringMessage("SLIDING_BETWEEN"))
         return object : Action {
             val startTime = units.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
+            var initialized = false
             override fun run(p: TelemetryPacket): Boolean {
+                if (!initialized) {
+                    liftActionWriter.write(StringMessage("$lastName SLIDING_BETWEEN"))
+                    initialized = true
+                }
+
                 val currentTime = units.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
 
                 liftMotor.targetPosition = ((((endPosition-startPosition) * (currentTime-startTime)/time) + startPosition) * ticksPerInch).toInt()
@@ -124,7 +138,17 @@ class Lift @JvmOverloads constructor(
         }
     }
 
+    fun lockout() {
+        liftMotor.power = 0.0
+    }
+
+    fun unlock() {
+        liftMotor.power = 1.0
+    }
+
+    var lastName = ""
     override fun logState(uniqueName: String) {
+        lastName = uniqueName
         Logging.DEBUG("$uniqueName LIFT_POSITION", liftMotor.currentPosition)
         Logging.DEBUG("$uniqueName LIFT_TARGET", liftMotor.targetPosition)
         Logging.DEBUG("$uniqueName LIFT_CURRENT", liftMotor.getCurrent(CurrentUnit.AMPS))
