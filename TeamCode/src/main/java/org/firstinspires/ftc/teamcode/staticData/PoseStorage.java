@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.drive;
+package org.firstinspires.ftc.teamcode.staticData;
 
 import com.acmerobotics.roadrunner.Pose2d;
 
@@ -8,7 +8,7 @@ import com.acmerobotics.roadrunner.Pose2d;
  * A static field allows data to persist between opmodes.
  */
 public class PoseStorage {
-    public static Pose2d currentPose = new Pose2d(12, -61.5, -Math.PI / 2);
+    public static Pose2d currentPose = new Pose2d(0, 0, Math.PI);
 
     public static boolean isRedAlliance = false;
 }

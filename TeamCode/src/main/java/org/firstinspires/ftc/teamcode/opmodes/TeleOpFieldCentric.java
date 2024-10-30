@@ -18,16 +18,16 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.drive.Logging;
-import org.firstinspires.ftc.teamcode.drive.PoseStorage;
-import org.firstinspires.ftc.teamcode.drive.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.drive.subsystems.Outtake;
 import org.firstinspires.ftc.teamcode.galahlib.Button;
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential;
 import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
+import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.subsystems.Outtake;
 
 import java.util.List;
 
@@ -111,7 +111,6 @@ public class TeleOpFieldCentric extends LinearOpMode {
             inverted.update(gamepad1.y);
 
             driveBase.update(p);
-            visionDetection.update(driveBase.localizer, p);
 
             if (driveAction != null && !driveAction.run(p)) {
                 driveAction = null;
@@ -128,7 +127,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                     input = poseEstimate.heading.inverse().times(input);
                 }
 
-                if (inverted.val) {
+                if (inverted.val || sampleState == SampleState.Outtaking) {
                     input = Rotation2d.fromDouble(Math.PI).times(input);
                 }
 
@@ -184,7 +183,10 @@ public class TeleOpFieldCentric extends LinearOpMode {
                         break;
                     case Outtaking:
                         Logging.LOG("Running drop sequence");
-                        sampleAction = outtake.dropSample();
+                        sampleAction = new LoggingSequential("DROP_SEQUENCE",
+                                outtake.dropSample(),
+                                new Loggable("WAIT_FOR_ESCAPE", new SleepAction(3.0)),
+                                outtake.retractArm());
                         sampleState = SampleState.Waiting;
                         break;
 

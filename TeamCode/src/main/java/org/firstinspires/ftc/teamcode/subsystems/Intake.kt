@@ -1,12 +1,9 @@
-package org.firstinspires.ftc.teamcode.drive.subsystems
+package org.firstinspires.ftc.teamcode.subsystems
 
 import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
-import com.acmerobotics.roadrunner.Action
 import com.acmerobotics.roadrunner.InstantAction
 import com.acmerobotics.roadrunner.ParallelAction
-import com.acmerobotics.roadrunner.SequentialAction
-import com.acmerobotics.roadrunner.ftc.DownsampledWriter
 import com.acmerobotics.roadrunner.ftc.FlightRecorder
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor
 import com.qualcomm.hardware.rev.RevColorSensorV3
@@ -17,8 +14,8 @@ import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit
 import org.firstinspires.ftc.robotcore.internal.system.Deadline
-import org.firstinspires.ftc.teamcode.drive.Logging
-import org.firstinspires.ftc.teamcode.drive.PoseStorage
+import org.firstinspires.ftc.teamcode.staticData.Logging
+import org.firstinspires.ftc.teamcode.staticData.PoseStorage
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
@@ -29,7 +26,6 @@ import org.firstinspires.ftc.teamcode.galahlib.mechanisms.DigitalInput
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.Lift
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.ServoToggle
 import org.firstinspires.ftc.teamcode.messages.ColorMessage
-import org.firstinspires.ftc.teamcode.messages.StringMessage
 import java.util.concurrent.TimeUnit
 import kotlin.math.max
 
@@ -42,7 +38,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         @JvmField var transferSpeed = 0.7
         @JvmField var captureTimeout = 750L
 
-        @JvmField var currentTrigger = 0.5
+        @JvmField var currentTrigger = 1.0
         @JvmField var currentTriggerSpeed = -0.4
 
         @JvmField var minExtension = 5.0
@@ -50,14 +46,14 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         @JvmField var extendTime = 3.0 // Over seconds
 
         class FlipLimits {
-            @JvmField var downPosition = 0.25
+            @JvmField var downPosition = 0.28
             @JvmField var upPosition = 0.03
         }
         @JvmField val flipLimits = FlipLimits()
     }
 
     companion object {
-        val PARAMS = Params()
+        @JvmStatic val PARAMS = Params()
     }
 
     val slides = Lift(hardwareMap, "intakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Intake, 85.935483871)
@@ -100,7 +96,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         return frontTriggered || backTriggered
     }
     val backTriggered: Boolean get() {
-        return distanceSensor.getDistance(DistanceUnit.MM) < 20
+        return distanceSensor.getDistance(DistanceUnit.MM) < 40
     }
 
     fun resetSlides(): LoggableAction {
@@ -113,11 +109,8 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     fun extendSlides(): LoggableAction {
         return LoggingSequential(
             "EXTEND_INTAKE",
-            slides.gotoDistance(PARAMS.minExtension / 2),
-            Loggable("FLIP_INTAKE_FINISH_DEPLOY", ParallelAction(
-                flipServo.setPosition(true),
-                slides.gotoDistance(PARAMS.minExtension)
-            ))
+            slides.gotoDistance(PARAMS.minExtension),
+            Loggable("FLIP_INTAKE_FINISH_DEPLOY", flipServo.setPosition(true))
         )
     }
 

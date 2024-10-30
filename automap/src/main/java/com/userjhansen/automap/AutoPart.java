@@ -3,6 +3,7 @@ package com.userjhansen.automap;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.userjhansen.automap.Maps.Map;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -10,7 +11,7 @@ import java.util.Arrays;
 
 public class AutoPart {
     public PartType type;
-    private Pose2d pose;
+    private final Pose2d pose;
     @Nullable
     private Pose2d offset;
 
@@ -61,7 +62,17 @@ public class AutoPart {
         ArrayList<AutoPart> parts = new ArrayList<>();
 
         parts.add(new AutoPart(PartType.CHANGE_LIGHT, 0));
-        parts.addAll(Arrays.asList(map.getStartParts()));
+        parts.add(new AutoPart(PartType.STRAFE, map.getSpecimenPosition()));
+        parts.add(new AutoPart(PartType.ACTION, 0));
+
+        for (AutoPart[] partList: map.getIntakeParts()) {
+            parts.addAll(Arrays.asList(partList));
+            parts.add(new AutoPart(PartType.ACTION, 1));
+            parts.addAll(Arrays.asList(map.getDepositParts()));
+            parts.add(new AutoPart(PartType.ACTION, 2));
+        }
+
+        parts.addAll(Arrays.asList(map.getParkParts()));
 
         parts.add(new AutoPart(PartType.CHANGE_LIGHT, 1));
 

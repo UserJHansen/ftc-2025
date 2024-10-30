@@ -14,7 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit
 import org.firstinspires.ftc.robotcore.internal.system.Deadline
-import org.firstinspires.ftc.teamcode.drive.Logging
+import org.firstinspires.ftc.teamcode.staticData.Logging
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
 import org.firstinspires.ftc.teamcode.messages.BooleanMessage

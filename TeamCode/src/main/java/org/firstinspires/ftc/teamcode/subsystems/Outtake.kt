@@ -1,5 +1,6 @@
-package org.firstinspires.ftc.teamcode.drive.subsystems
+package org.firstinspires.ftc.teamcode.subsystems
 
+import com.acmerobotics.dashboard.config.Config
 import com.acmerobotics.roadrunner.InstantAction
 import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.SequentialAction
@@ -20,6 +21,7 @@ import org.firstinspires.ftc.teamcode.galahlib.mechanisms.Lift
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.ServoMultiState
 import org.firstinspires.ftc.teamcode.messages.StringMessage
 
+@Config
 class Outtake(hardwareMap: HardwareMap) : StateLoggable {
     class Params {
         @JvmField
@@ -69,7 +71,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var transfer = 0.57
 
             @JvmField
-            var transferSafe = 0.4
+            var transferSafe = 0.35
         }
 
         val liftPositions = LiftPositions()
@@ -79,8 +81,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     companion object {
-        @JvmField
-        val PARAMS = Params()
+        @JvmStatic val PARAMS = Params()
     }
 
     val lift = Lift(hardwareMap, "outtakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Outake)
@@ -211,16 +212,22 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("RELEASE_SAMPLE", ParallelAction(InstantAction {
                 outtakeActionWriter.write(StringMessage("DROP_SAMPLE"))
             }, grabber.setPosition(0))),
-            Loggable("WAIT_FOR_ESCAPE", SleepAction(3.0)),
-            Loggable(
-                "MOVE_ARM_IN", ParallelAction(
-                    elbow.setPosition(0),
-                    wrist.setPosition(0)
-                )
-            ),
-            lift.gotoDistance(0.0)
         )
     }
+
+    fun retractArm(): LoggableAction = LoggingSequential(
+        "RETRACT_ARM",
+        Loggable("LOG", InstantAction {
+            outtakeActionWriter.write(StringMessage("DROP_SAMPLE"))
+        }),
+        Loggable(
+            "MOVE_ARM_IN", ParallelAction(
+                elbow.setPosition(0),
+                wrist.setPosition(0)
+            )
+        ),
+        lift.gotoDistance(0.0)
+    )
 
     fun specimenReady(): LoggableAction {
         return LoggingSequential(

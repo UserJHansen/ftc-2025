@@ -1,46 +1,35 @@
-package com.userjhansen.automap.Maps;
+package com.userjhansen.automap.Maps
 
-import com.acmerobotics.roadrunner.Pose2d;
-import com.userjhansen.automap.AutoPart;
-import com.userjhansen.automap.PartType;
+import com.acmerobotics.roadrunner.Pose2d
+import com.userjhansen.automap.AutoPart
+import com.userjhansen.automap.PartType
 
-public class InsideOne implements Map {
-    public Pose2d startPosition = new Pose2d(-35, -60, -Math.PI / 2);
+class InsideOne : Map {
+    override val startPosition = Pose2d(-35.0, -60.0, -Math.PI / 2)
 
-    public static Pose2d depositPosition = new Pose2d(-60, -50, -(Math.PI / 16) + (Math.PI/2));
+    override val specimenPosition = Pose2d(-9.0, -32.0, 0.0)
+    override val depositPosition = Pose2d(-60.0, -50.0, -(Math.PI / 16) + (Math.PI / 2))
 
-    public static AutoPart[] startParts = {
-            new AutoPart(PartType.STRAFE, new Pose2d(-9, -32,0)),
-            new AutoPart(PartType.ACTION, 0),
+    override val intakeParts = arrayOf(
+        arrayOf(
+            AutoPart(PartType.SPLINE_TO, Pose2d(-48.0, -40.0, Math.PI / 2.0), Math.PI),
+            AutoPart(PartType.STRAFE_TO, Pose2d(-48.0, -35.0, Math.PI / 2.0)),
+        ),
+        arrayOf(
+            AutoPart(PartType.STRAFE_TO, Pose2d(-59.0, -35.0, Math.PI / 2.0)),
+        ),
+        arrayOf(
+            AutoPart(PartType.STRAFE_TO, Pose2d(-54.0, -24.0, -Math.PI)),
+            AutoPart(PartType.STRAFE, Pose2d(-57.0, -24.0, -Math.PI)),
+        ),
+    )
 
-            new AutoPart(PartType.SPLINE_TO, new Pose2d(-48, -40, Math.PI/2), Math.PI),
-            new AutoPart(PartType.STRAFE_TO, new Pose2d(-48, -35, Math.PI/2)),
-            new AutoPart(PartType.ACTION, 1),
-            new AutoPart(PartType.STRAFE_TO, depositPosition),
-            new AutoPart(PartType.ACTION, 2),
+    override val depositParts = arrayOf(
+        AutoPart(PartType.STRAFE_TO, depositPosition),
+    )
 
-            new AutoPart(PartType.STRAFE_TO, new Pose2d(-59, -35, Math.PI/2)),
-            new AutoPart(PartType.ACTION, 1),
-            new AutoPart(PartType.STRAFE_TO, depositPosition),
-            new AutoPart(PartType.ACTION, 2),
-
-            new AutoPart(PartType.STRAFE_TO, new Pose2d(-54, -24, -Math.PI)),
-            new AutoPart(PartType.STRAFE, new Pose2d(-57, -24, -Math.PI)),
-            new AutoPart(PartType.ACTION, 1),
-            new AutoPart(PartType.STRAFE_TO, depositPosition),
-            new AutoPart(PartType.ACTION, 2),
-
-            new AutoPart(PartType.STRAFE_TO, new Pose2d(-50, -12, 0)),
-            new AutoPart(PartType.STRAFE_TO, new Pose2d(-22, -12, 0)),
-    };
-
-    @Override
-    public Pose2d getStartPosition() {
-        return startPosition;
-    }
-
-    @Override
-    public AutoPart[] getStartParts() {
-        return startParts;
-    }
+    override val parkParts = arrayOf(
+        AutoPart(PartType.STRAFE_TO, Pose2d(-50.0, -12.0, 0.0)),
+        AutoPart(PartType.STRAFE_TO, Pose2d(-22.0, -12.0, 0.0)),
+    )
 }

@@ -1,10 +1,16 @@
-package com.userjhansen.automap.Maps;
+package com.userjhansen.automap.Maps
 
-import com.acmerobotics.roadrunner.Pose2d;
-import com.userjhansen.automap.AutoPart;
+import com.acmerobotics.roadrunner.Pose2d
+import com.userjhansen.automap.AutoPart
 
-public interface Map {
-    public Pose2d getStartPosition();
+interface Map {
+    val startPosition: Pose2d
 
-    public AutoPart[] getStartParts();
+//    GAME SPECIFIC OPTIMISATION
+    val specimenPosition: Pose2d
+    val depositPosition: Pose2d
+
+    val intakeParts: Array<Array<AutoPart>>
+    val depositParts: Array<AutoPart>
+    val parkParts: Array<AutoPart>
 }

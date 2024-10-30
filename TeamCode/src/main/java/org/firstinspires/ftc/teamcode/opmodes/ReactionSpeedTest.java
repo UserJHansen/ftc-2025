@@ -9,8 +9,8 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import org.firstinspires.ftc.teamcode.drive.Logging;
-import org.firstinspires.ftc.teamcode.drive.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
+import org.firstinspires.ftc.teamcode.subsystems.Intake;
 
 import java.util.List;
 

@@ -30,7 +30,6 @@ import kotlin.Pair;
 public class MeepMeepVis {
 
     public static TrajectoryActionBuilder addParts(TrajectoryActionBuilder traj, AutoPart[] parts) {
-//        For blue side, multiply all y values by -1 and flip the heading
         for (AutoPart part : parts) {
             switch (part.type) {
                 case STRAFE:

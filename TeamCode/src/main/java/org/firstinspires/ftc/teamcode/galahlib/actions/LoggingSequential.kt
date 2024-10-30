@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.galahlib.actions
 
 import com.acmerobotics.dashboard.canvas.Canvas
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
-import org.firstinspires.ftc.teamcode.drive.Logging
+import org.firstinspires.ftc.teamcode.staticData.Logging
 
 class LoggingSequential(val baseName: String, val initialActions: List<LoggableAction>) : LoggableAction {
     private var actions = initialActions

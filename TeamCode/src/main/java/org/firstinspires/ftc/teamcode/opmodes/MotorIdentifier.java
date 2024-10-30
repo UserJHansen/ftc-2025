@@ -8,7 +8,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.drive.Logging;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.galahlib.Button;
 
 @TeleOp(group = "testing", name = "Motor Identifier Test")

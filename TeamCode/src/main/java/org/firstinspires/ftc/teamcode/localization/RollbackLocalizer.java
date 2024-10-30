@@ -7,11 +7,12 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.Twist2d;
 import com.acmerobotics.roadrunner.Twist2dDual;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter;
 import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 
 import org.firstinspires.ftc.teamcode.Drawing;
-import org.firstinspires.ftc.teamcode.drive.Logging;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
 import org.firstinspires.ftc.teamcode.messages.RollbackPoseMessage;
 
@@ -38,20 +39,34 @@ public class RollbackLocalizer implements SettableLocalizer {
         long currentTime = System.currentTimeMillis();
 
         Pose2d currentPose = newPose;
+        Pose2d previousPose = oldestPose;
         oldestPose = newPose;
         ArrayList<Long> deleteTimestamps = new ArrayList<>();
+        boolean encounteredNewData = false;
         for (long timeStamp : poseDiffs.keySet()) {
             if (timeStamp + pipelineLatency < currentTime) {
                 // Diff is old, delete it
                 deleteTimestamps.add(timeStamp);
+                previousPose = previousPose.plus(Objects.requireNonNull(poseDiffs.get(timeStamp)));
             } else {
                 // Diff is within the latency window, use it to correct the current location
+                if (!encounteredNewData) {
+//                    Average the new pose and the previous pose in that position
+                    Twist2d difference = currentPose.minus(previousPose);
+                    Vector2d position = previousPose.position.plus(difference.line.div(2.0));
+                    double rotation = previousPose.heading.toDouble() + (difference.angle/2.0);
+                    currentPose = new Pose2d(position, rotation);
+                    encounteredNewData = true;
+                }
+
                 currentPose = currentPose.plus(Objects.requireNonNull(poseDiffs.get(timeStamp)));
             }
         }
         for (long timestamp : deleteTimestamps) {
             poseDiffs.remove(timestamp);
         }
+
+        Logging.LOG("POSE_CHANGE", newPose.minus(previousPose));
         // Apply the new location
         FlightRecorder.write("ROLLBACK_NEW_POSE", new RollbackPoseMessage(currentPose, pipelineLatency));
         this.setCurrentPose(currentPose);

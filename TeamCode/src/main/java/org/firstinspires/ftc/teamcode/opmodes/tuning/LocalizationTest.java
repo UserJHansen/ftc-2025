@@ -9,7 +9,8 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.drive.Logging;
+import org.firstinspires.ftc.teamcode.localization.VisionDetection;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 
 public class LocalizationTest extends LinearOpMode {
     @Override
@@ -19,6 +20,7 @@ public class LocalizationTest extends LinearOpMode {
 
         if (TuningOpModes.DRIVE_CLASS.equals(MecanumDrive.class)) {
             MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
+            VisionDetection visionDetection = new VisionDetection(hardwareMap);
 
             waitForStart();
 
@@ -33,6 +35,7 @@ public class LocalizationTest extends LinearOpMode {
 
                 TelemetryPacket packet = new TelemetryPacket();
                 drive.update(packet);
+                visionDetection.update(drive.localizer, packet);
 
                 Logging.update();
 

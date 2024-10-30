@@ -35,7 +35,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.drive.Logging;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
 import org.firstinspires.ftc.teamcode.localization.FuseLocation;
 import org.firstinspires.ftc.teamcode.localization.OTOSLocalizer;
@@ -44,6 +44,7 @@ import org.firstinspires.ftc.teamcode.localization.ThreeDeadWheelLocalizer;
 import org.firstinspires.ftc.teamcode.messages.DriveCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.MecanumCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
+import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
 
 import java.lang.Math;
 import java.util.Arrays;
@@ -397,6 +398,25 @@ public final class MecanumDrive implements StateLoggable {
                 beginPose, 0.0,
                 defaultTurnConstraints,
                 defaultVelConstraint, defaultAccelConstraint
+        );
+    }
+
+    public TrajectoryActionBuilder allianceActionBuilder(Pose2d beginPose) {
+        return new TrajectoryActionBuilder(
+                TurnAction::new,
+                FollowTrajectoryAction::new,
+                new TrajectoryBuilderParams(
+                        1e-6,
+                        new ProfileParams(
+                                0.25, 0.1, 1e-2
+                        )
+                ),
+                beginPose, 0.0,
+                defaultTurnConstraints,
+                defaultVelConstraint, defaultAccelConstraint,
+                PoseStorage.isRedAlliance ? pose -> pose
+                        : pose -> new Pose2dDual<>(
+                        pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
         );
     }
 }
