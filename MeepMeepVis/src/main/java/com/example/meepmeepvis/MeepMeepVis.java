@@ -3,11 +3,9 @@ package com.example.meepmeepvis;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2dDual;
 import com.acmerobotics.roadrunner.ProfileParams;
-import com.acmerobotics.roadrunner.Trajectory;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.TrajectoryBuilderParams;
-import com.acmerobotics.roadrunner.TurnConstraints;
 import com.noahbres.meepmeep.MeepMeep;
 import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeBlueDark;
 import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedDark;
@@ -22,10 +20,6 @@ import com.userjhansen.automap.AutoPart;
 import com.userjhansen.automap.Maps.InsideOne;
 import com.userjhansen.automap.Maps.Map;
 import com.userjhansen.automap.Maps.OutsideOne;
-
-import java.util.ArrayList;
-
-import kotlin.Pair;
 
 public class MeepMeepVis {
 
@@ -78,7 +72,7 @@ public class MeepMeepVis {
                 baseTrajBuilder.getBaseTurnConstraints(), baseTrajBuilder.getBaseVelConstraint(), baseTrajBuilder.getBaseAccelConstraint(),
                 isRed ? pose -> pose
                         : pose -> new Pose2dDual<>(
-                                pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
+                                pose.position.x.unaryMinus(), pose.position.y.unaryMinus(), pose.heading.plus(Math.PI))
 
         );
 
@@ -99,6 +93,7 @@ public class MeepMeepVis {
             boolean isRed = loopIsRed;
 
             RoadRunnerBotEntity bot = new DefaultBotBuilder(meepMeep)
+                    .setDimensions(16.25, 17.5)
                     .setDriveTrainType(DriveTrainType.MECANUM)
                     .setColorScheme(isRed ? new ColorSchemeRedDark() : new ColorSchemeBlueDark())
                     // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
@@ -109,6 +104,7 @@ public class MeepMeepVis {
             meepMeep.addEntity(bot);
 
             bot = new DefaultBotBuilder(meepMeep)
+                    .setDimensions(16.25, 17.5)
                     .setDriveTrainType(DriveTrainType.MECANUM)
                     .setColorScheme(isRed ? new ColorSchemeRedDark() : new ColorSchemeBlueDark())
                     // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width

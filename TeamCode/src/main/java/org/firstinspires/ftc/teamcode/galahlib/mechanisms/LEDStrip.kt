@@ -10,7 +10,10 @@ import java.util.concurrent.TimeUnit
 class LEDStrip(hardwareMap: HardwareMap) {
     val driver: RevBlinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver::class.java, "blinkin")
 
-    fun showPattern(colors: List<RevBlinkinLedDriver.BlinkinPattern>, blinksPerSecond: Double): Action {
+    fun showPattern(
+        colors: List<RevBlinkinLedDriver.BlinkinPattern>,
+        blinksPerSecond: Double
+    ): Action {
         return object : Action {
             val timeout = Deadline((1000 / blinksPerSecond).toLong(), TimeUnit.MILLISECONDS)
             var index = 0

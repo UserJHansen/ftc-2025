@@ -17,14 +17,16 @@ import kotlin.math.abs
 // - GoBilda High Torque servo: 1.17
 // - GoBilda Super speed servo: 0.45
 // - REV SRS: 1.1 (This is the max, if you've set smaller limits in hardware lower this number
-class ServoToggle(hardwareMap: HardwareMap, name: String, val off: Double, val on: Double, fullRotationTime: Double) {
+class ServoToggle(
+    hardwareMap: HardwareMap,
+    name: String,
+    val off: Double,
+    val on: Double,
+    fullRotationTime: Double
+) {
     val servo = hardwareMap.get(Servo::class.java, name)
-    val transitionTime = abs(on-off) * fullRotationTime
+    val transitionTime = abs(on - off) * fullRotationTime
     var currentState = false
-
-    init {
-        servo.position = off
-    }
 
     fun setPosition(newState: Boolean): Action {
         return object : Action {
@@ -46,6 +48,6 @@ class ServoToggle(hardwareMap: HardwareMap, name: String, val off: Double, val o
         return SequentialAction(InstantAction {
             currentState = newState
             servo.position = if (newState) on else off
-        },SleepAction(transitionTime))
+        }, SleepAction(transitionTime))
     }
 }

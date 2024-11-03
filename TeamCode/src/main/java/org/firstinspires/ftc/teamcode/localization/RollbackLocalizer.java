@@ -7,28 +7,26 @@ import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.Twist2d;
 import com.acmerobotics.roadrunner.Twist2dDual;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter;
 import com.acmerobotics.roadrunner.ftc.FlightRecorder;
 
 import org.firstinspires.ftc.teamcode.Drawing;
-import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
 import org.firstinspires.ftc.teamcode.messages.RollbackPoseMessage;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
 public class RollbackLocalizer implements SettableLocalizer {
-    SettableLocalizer sourceLocalizer;
-
+    private final DownsampledWriter estimatedPoseWriter = new DownsampledWriter("ESTIMATED_POSE", 50_000_000);
     public Pose2d currentPose = new Pose2d(0, 0, 0);
     public Pose2d oldestPose = new Pose2d(0, 0, 0); // Used in path history drawing
+    SettableLocalizer sourceLocalizer;
     Map<Long, Twist2d> poseDiffs = new TreeMap<>();
-
-    private final DownsampledWriter estimatedPoseWriter = new DownsampledWriter("ESTIMATED_POSE", 50_000_000);
 
     public RollbackLocalizer(SettableLocalizer sourceLocalizer) {
         this.sourceLocalizer = sourceLocalizer;
@@ -40,7 +38,6 @@ public class RollbackLocalizer implements SettableLocalizer {
 
         Pose2d currentPose = newPose;
         Pose2d previousPose = oldestPose;
-        oldestPose = newPose;
         ArrayList<Long> deleteTimestamps = new ArrayList<>();
         boolean encounteredNewData = false;
         for (long timeStamp : poseDiffs.keySet()) {
@@ -49,16 +46,6 @@ public class RollbackLocalizer implements SettableLocalizer {
                 deleteTimestamps.add(timeStamp);
                 previousPose = previousPose.plus(Objects.requireNonNull(poseDiffs.get(timeStamp)));
             } else {
-                // Diff is within the latency window, use it to correct the current location
-                if (!encounteredNewData) {
-//                    Average the new pose and the previous pose in that position
-                    Twist2d difference = currentPose.minus(previousPose);
-                    Vector2d position = previousPose.position.plus(difference.line.div(2.0));
-                    double rotation = previousPose.heading.toDouble() + (difference.angle/2.0);
-                    currentPose = new Pose2d(position, rotation);
-                    encounteredNewData = true;
-                }
-
                 currentPose = currentPose.plus(Objects.requireNonNull(poseDiffs.get(timeStamp)));
             }
         }
@@ -74,7 +61,9 @@ public class RollbackLocalizer implements SettableLocalizer {
 
     @Override
     public void setCurrentPose(Pose2d currentPose) {
+        this.poseDiffs = new HashMap<>();
         this.currentPose = currentPose;
+        this.oldestPose = currentPose;
         this.sourceLocalizer.setCurrentPose(currentPose);
     }
 

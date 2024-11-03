@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.localization;
 
-import android.util.Log;
-
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Pose2d;
@@ -15,12 +13,14 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Drawing;
 import org.firstinspires.ftc.teamcode.staticData.Logging;
+import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
 
 @Config
 public class VisionDetection {
-    public Limelight3A limelight;
     public static Double stdDevLimit = 0.05;
-
+    public Limelight3A limelight;
+    long lastResult = 0;
+    long iteration = 0;
     public VisionDetection(HardwareMap hardwareMap) {
         limelight = hardwareMap.get(Limelight3A.class, "limelight");
 
@@ -29,8 +29,6 @@ public class VisionDetection {
         limelight.start();
     }
 
-    long lastResult = 0;
-    long iteration = 0;
     public void update(RollbackLocalizer localizer, TelemetryPacket packet) {
         iteration += 1;
 
@@ -55,20 +53,26 @@ public class VisionDetection {
             double targetingLatency = result.getTargetingLatency();
             double parseLatency = result.getParseLatency();
             double staleness = result.getStaleness();
-            Logging.DEBUG("(limelight) confidence", result.getStddevMt2()[0]);
-            Logging.LOG("(limelight) latency", captureLatency + targetingLatency + parseLatency + staleness);
-            Logging.LOG("(limelight) Last Pose", botpose);
 
             Pose2d robotPose = new Pose2d(
                     DistanceUnit.INCH.fromMeters(botpose.getPosition().x),
                     DistanceUnit.INCH.fromMeters(botpose.getPosition().y),
                     AngleUnit.RADIANS.fromDegrees(botpose.getOrientation().getYaw()));
 
+            Logging.DEBUG("(limelight) confidence", result.getStddevMt2()[0]);
+            Logging.LOG("(limelight) latency", captureLatency + targetingLatency + parseLatency + staleness);
+            Logging.LOG("(limelight) Last Pose", robotPose);
+
             double x = robotPose.position.x;
             double y = robotPose.position.y;
             if (x < -72 || x > 72 || y > 72 || y < -72) {
 //                Out of bounds
 //                This is due to MT2 issues with rotation
+                Logging.LOG("OOB Location");
+                if (PoseStorage.isInit) {
+                    limelight.updateRobotOrientation(AngleUnit.DEGREES.fromRadians(robotPose.heading.toDouble() + Math.PI));
+                    localizer.setCurrentPose(new Pose2d(0, 0, robotPose.heading.toDouble() + Math.PI));
+                }
                 return;
             }
 

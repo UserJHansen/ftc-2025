@@ -34,17 +34,8 @@ import java.util.List;
 @TeleOp(group = "advanced", name = "Teleop")
 @Config
 public class TeleOpFieldCentric extends LinearOpMode {
-    public static double SlowmodeSpeed = 0.8;
-    public static double SlowmodeTurning = 0.8;
-
-    enum SampleState {
-        Waiting,
-        Intaking,
-        Outtaking,
-
-        SpecimenWait,
-        SpecimenIntake,
-    }
+    public static double SlowmodeSpeed = 0.4;
+    public static double SlowmodeTurning = 0.5;
 
     @SuppressLint("DefaultLocale")
     @Override
@@ -56,7 +47,6 @@ public class TeleOpFieldCentric extends LinearOpMode {
 
         Button fieldMode = new Button();
         Button slowMode = new Button();
-        Button inverted = new Button();
 
         Button specimenReady = new Button();
 
@@ -65,28 +55,35 @@ public class TeleOpFieldCentric extends LinearOpMode {
 
         Logging.telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
-        Action initAction = new ParallelAction(
-                intake.resetSlides(),
-                outtake.resetLifts()
-        );
-
+        TelemetryPacket p;
+        if (Logging.DEBUG) {
+            Action initAction = new ParallelAction(
+                    intake.resetSlides(),
+                    outtake.resetLifts()
+            );
 //        Run initialisation tasks
-        TelemetryPacket p = new TelemetryPacket();
-        while (!isStarted() && initAction.run(p)) {
-            FtcDashboard.getInstance().sendTelemetryPacket(p);
             p = new TelemetryPacket();
-            Logging.update();
+            while (!isStarted() && initAction.run(p)) {
+                FtcDashboard.getInstance().sendTelemetryPacket(p);
+                p = new TelemetryPacket();
+                Logging.update();
+            }
         }
 
         intake.lockout();
         outtake.lockout();
 
+        PoseStorage.splitControls = false;
         while (!isStarted()) {
             p = new TelemetryPacket();
             driveBase.update(p);
             visionDetection.update(driveBase.localizer, p);
             Logging.update();
             FtcDashboard.getInstance().sendTelemetryPacket(p);
+
+            if (gamepad2.back) {
+                PoseStorage.splitControls = true;
+            }
         }
 
         if (isStopRequested()) return;
@@ -96,75 +93,89 @@ public class TeleOpFieldCentric extends LinearOpMode {
             module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
 
-        LoggableAction driveAction = null;
         LoggableAction sampleAction = null;
         SampleState sampleState = SampleState.Waiting;
+        double lastTime = System.currentTimeMillis() / 1000.0;
 
         intake.unlock();
         outtake.unlock();
 
+        PoseStorage.isInit = false;
         while (opModeIsActive() && !isStopRequested()) {
+            double secondsPassed = (System.currentTimeMillis() / 1000.0) - lastTime;
+            lastTime = System.currentTimeMillis() / 1000.0;
             p = new TelemetryPacket();
 
-            slowMode.update(gamepad1.b);
-            fieldMode.update(gamepad1.x);
-            inverted.update(gamepad1.y);
+            if (gamepad2.back) {
+                PoseStorage.splitControls = true;
+                fieldMode.val = true;
+            }
+
+            Vector2d input = new Vector2d(
+                    -gamepad1.left_stick_y,
+                    -gamepad1.left_stick_x
+            );
+
+            PoseStorage.shouldHallucinate = (PoseStorage.splitControls ? gamepad2 : gamepad1).guide;
+            if (PoseStorage.splitControls) {
+                slowMode.update(gamepad1.left_bumper);
+                fieldMode.update(gamepad1.x);
+
+                if (gamepad2.b) {
+                    PoseStorage.isRedAlliance = true;
+                } else if (gamepad2.x) {
+                    PoseStorage.isRedAlliance = false;
+                }
+            } else {
+                slowMode.update(gamepad1.b);
+                fieldMode.update(gamepad1.x);
+
+                if (gamepad1.dpad_right) {
+                    PoseStorage.isRedAlliance = true;
+                } else if (gamepad1.dpad_left) {
+                    PoseStorage.isRedAlliance = false;
+                }
+            }
 
             driveBase.update(p);
 
-            if (driveAction != null && !driveAction.run(p)) {
-                driveAction = null;
-            } else if (driveAction == null) {
-                Pose2d poseEstimate = driveBase.localizer.currentPose;
-                // Create a vector from the gamepad x/y inputs
-                // Then, rotate that vector by the inverse of that heading
-                Vector2d input = new Vector2d(
-                        -gamepad1.left_stick_y,
-                        -gamepad1.left_stick_x
-                ).times(slowMode.val ? SlowmodeSpeed : 1);
+            Pose2d poseEstimate = driveBase.localizer.currentPose;
+            input = input.times(slowMode.val ? SlowmodeSpeed : 1);
 
-                if (fieldMode.val) {
-                    input = poseEstimate.heading.inverse().times(input);
-                }
+            if (fieldMode.val) {
+                input = poseEstimate.heading.inverse().plus((PoseStorage.isRedAlliance ? 1 : -1) * Math.PI / 2).times(input);
+            } else if (!PoseStorage.splitControls && (sampleState == SampleState.Outtaking || sampleState == SampleState.SpecimenWait)) {
+                input = Rotation2d.fromDouble(Math.PI).times(input);
+            }
 
-                if (inverted.val || sampleState == SampleState.Outtaking) {
-                    input = Rotation2d.fromDouble(Math.PI).times(input);
-                }
+            PoseVelocity2d drivePower = new PoseVelocity2d(
+                    input,
+                    -gamepad1.right_stick_x * (slowMode.val ? SlowmodeTurning : 1)
+            );
 
-                PoseVelocity2d drivePower = new PoseVelocity2d(
-                        input,
-                        -gamepad1.right_stick_x * (slowMode.val ? SlowmodeTurning : 1)
-                );
+            Logging.DEBUG("X Input", input.x);
+            Logging.DEBUG("Y Input", input.y);
 
-                Logging.DEBUG("X Input", input.x);
-                Logging.DEBUG("Y Input", input.y);
+            // Pass in the rotated input + right stick value for rotation
+            // Rotation is not part of the rotated input thus must be passed in separately
+            driveBase.setDrivePowers(drivePower);
 
-                // Pass in the rotated input + right stick value for rotation
-                // Rotation is not part of the rotated input thus must be passed in separately
-                driveBase.setDrivePowers(drivePower);
+            if (sampleState == SampleState.SpecimenIntake && (sampleAction == null || sampleAction.getName().equals("CANCELABLE_ADJUST"))) {
+                double change = secondsPassed * 2 * (PoseStorage.splitControls ? gamepad2.right_trigger - gamepad2.left_trigger : gamepad1.right_trigger - gamepad1.left_trigger);
+                Outtake.Companion.getPARAMS().getLiftPositions().topSpecimen += change;
+                sampleAction = new Loggable("CANCELABLE_ADJUST", outtake.getLift().gotoDistance(Outtake.Companion.getPARAMS().getLiftPositions().topSpecimen));
             }
 
             Logging.LOG("SAMPLE_STATE", sampleState);
             if (sampleAction != null) {
                 Logging.DEBUG("SAMPLE_ACTION", sampleAction.getName());
+
                 if (!sampleAction.run(p)) {
                     Logging.LOG("SAMPLE_ACTION_FINISHED");
-                    sampleAction = null;
-                }
-            }
-
-            if (specimenReady.update(gamepad1.a) && sampleAction == null && sampleState == SampleState.Waiting) {
-                sampleAction = outtake.specimenReady();
-                sampleState = SampleState.SpecimenWait;
-            }
-
-            if (progressSample.update(gamepad1.right_bumper) && sampleAction == null) {
-                switch (sampleState) {
-                    case Waiting:
-                        Logging.LOG("Running capture sequence");
+                    if (sampleState == SampleState.Intaking) {
+                        sampleState = SampleState.Transferring;
                         sampleAction = new LoggingSequential(
-                                "INTAKE_CAPTURE",
-                                intake.captureSample(),
+                                "TRANSFERRING",
                                 outtake.readyForTransfer(),
                                 new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
                                         intake.transfer(),
@@ -174,19 +185,51 @@ public class TeleOpFieldCentric extends LinearOpMode {
                                 intake.stopTransfer(),
                                 outtake.pickupInternalSample()
                         );
+                    } else {
+                        sampleAction = null;
+                    }
+                }
+            }
+
+            if (specimenReady.update((PoseStorage.splitControls ? gamepad2 : gamepad1).a) && sampleAction == null && sampleState == SampleState.Waiting) {
+                sampleAction = outtake.specimenReady();
+                sampleState = SampleState.SpecimenWait;
+            }
+
+            if (sampleState == SampleState.Waiting && sampleAction == null && (PoseStorage.splitControls ? gamepad2 : gamepad1).dpad_down) {
+                Logging.LOG("Running close capture sequence");
+                sampleAction = new Loggable(
+                        "INTAKE",
+                        new ParallelAction(
+                                outtake.readyForTransfer(),
+                                intake.captureSample(true, true)
+                        )
+                );
+                sampleState = SampleState.Intaking;
+            }
+
+            if (progressSample.update((PoseStorage.splitControls ? gamepad2 : gamepad1).right_bumper) && sampleAction == null) {
+                switch (sampleState) {
+                    case Waiting:
+                        Logging.LOG("Running capture sequence");
+                        sampleAction = new Loggable("INTAKE", new ParallelAction(
+                                outtake.readyForTransfer(),
+                                intake.captureSample(true)
+                        ));
                         sampleState = SampleState.Intaking;
                         break;
-                    case Intaking:
+                    case Transferring:
                         Logging.LOG("Running deploy sequence");
                         sampleAction = outtake.topBasket();
                         sampleState = SampleState.Outtaking;
                         break;
                     case Outtaking:
                         Logging.LOG("Running drop sequence");
-                        sampleAction = new LoggingSequential("DROP_SEQUENCE",
-                                outtake.dropSample(),
-                                new Loggable("WAIT_FOR_ESCAPE", new SleepAction(3.0)),
-                                outtake.retractArm());
+                        sampleAction = outtake.dropSample();
+                        sampleState = SampleState.ReturnArm;
+                        break;
+                    case ReturnArm:
+                        sampleAction = outtake.retractArm();
                         sampleState = SampleState.Waiting;
                         break;
 
@@ -203,25 +246,36 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 }
             }
 
-            if (indicateFailure.update(gamepad1.left_bumper)) {
+            if ((PoseStorage.splitControls ? gamepad2 : gamepad1).start && (sampleState == SampleState.Intaking || sampleState == SampleState.Transferring)) {
+                sampleState = SampleState.Waiting;
+                sampleAction = intake.retractSlides();
+            }
+
+            Logging.LOG("CURRENT_TEAM", PoseStorage.isRedAlliance ? "RED" : "BLUE");
+            Logging.LOG("SPLIT", PoseStorage.splitControls);
+            Logging.LOG("FIELD_MODE", fieldMode.val);
+            Logging.LOG("SLOW_MODE", slowMode.val);
+            Logging.LOG("HALLUCINATING", PoseStorage.shouldHallucinate);
+
+            if (indicateFailure.update((PoseStorage.splitControls ? gamepad2 : gamepad1).left_bumper)) {
                 switch (sampleState) {
-                    case Waiting: // Probably a false grab?
-                    case Intaking:
+                    case Intaking: // Probably a false grab?
+                        sampleAction = new LoggingSequential(
+                                "INTAKE",
+                                outtake.readyForTransfer(),
+                                intake.captureSample(false)
+                        );
+                        break;
+                    case Transferring:
                         sampleAction = new LoggingSequential(
                                 "INTAKE_CAPTURE",
-                                intake.captureSample(),
-                                outtake.readyForTransfer(),
-                                new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
-                                        intake.transfer(),
-                                        outtake.waitForTransfer(),
-                                        new SleepAction(0.75)
-                                )), 3.0),
                                 intake.stopTransfer(),
                                 outtake.pickupInternalSample()
                         );
                         break;
                     case SpecimenWait:
                         sampleAction = outtake.abortSpecimen();
+                        sampleState = SampleState.Waiting;
                         break;
                     case SpecimenIntake: // False grab also probably
                         sampleAction = outtake.retryGrabSpecimen();
@@ -239,5 +293,16 @@ public class TeleOpFieldCentric extends LinearOpMode {
             Logging.update();
             FtcDashboard.getInstance().sendTelemetryPacket(p);
         }
+    }
+
+    enum SampleState {
+        Waiting,
+        Intaking,
+        Transferring,
+        Outtaking,
+        ReturnArm,
+
+        SpecimenWait,
+        SpecimenIntake,
     }
 }

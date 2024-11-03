@@ -8,15 +8,11 @@ import java.util.concurrent.TimeUnit;
 
 @Config
 public class Button {
+    public static long debounceIntervalMS = 100;
     public boolean val;
     public ButtonPressed whenPressed;
     private boolean isPressed = false;
-
-    public static long debounceIntervalMS = 50;
-
-    public interface ButtonPressed {
-        void call(boolean param);
-    }
+    private Deadline timeout = new Deadline(debounceIntervalMS, TimeUnit.MILLISECONDS);
 
     public Button(boolean default_val, ButtonPressed whenPressed) {
         this.val = default_val;
@@ -31,7 +27,6 @@ public class Button {
         this.val = false;
     }
 
-    private Deadline timeout = new Deadline(debounceIntervalMS, TimeUnit.MILLISECONDS);
     public Boolean update(boolean new_val) {
         if (new_val && !isPressed && timeout.hasExpired()) {
             val = !val;
@@ -42,5 +37,9 @@ public class Button {
         }
         isPressed = new_val;
         return false;
+    }
+
+    public interface ButtonPressed {
+        void call(boolean param);
     }
 }

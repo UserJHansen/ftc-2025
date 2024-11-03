@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.galahlib.mechanisms
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket
 import com.acmerobotics.roadrunner.Action
-import com.acmerobotics.roadrunner.NullAction
 import com.acmerobotics.roadrunner.SleepAction
 import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.hardware.Servo
@@ -21,12 +20,30 @@ class ServoMultiState(
     name: String,
     val states: DoubleArray,
     val fullRotationTime: Double,
-    var currentState: Int = 0
+    var currentPosition: Double = 0.0
 ) {
     val servo = hardwareMap.get(Servo::class.java, name)
 
-    init {
-        servo.position = states[currentState]
+    fun setManualLocation(newPosition: Double): Action {
+        return object : Action {
+            var initialized = false
+            var sleepAction: Action? = null
+            override fun run(p: TelemetryPacket): Boolean {
+                if (!initialized) {
+                    initialized = true
+                    if (currentPosition == newPosition) return false
+
+                    val transitionTime =
+                        abs(currentPosition - newPosition) * fullRotationTime
+
+                    currentPosition = newPosition
+                    servo.position = newPosition
+                    sleepAction = SleepAction(transitionTime)
+                }
+
+                return sleepAction?.run(p) != false
+            }
+        }
     }
 
     fun setPosition(newState: Int): Action {
@@ -36,13 +53,13 @@ class ServoMultiState(
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
                     initialized = true
-                    if (currentState == newState) return false
+                    if (currentPosition == states[newState]) return false
 
                     val transitionTime =
-                        abs(states[currentState] - states[newState]) * fullRotationTime
+                        abs(currentPosition - states[newState]) * fullRotationTime
 
-                    currentState = newState
-                    servo.position = states[currentState]
+                    currentPosition = states[newState]
+                    servo.position = states[newState]
                     sleepAction = SleepAction(transitionTime)
                 }
 

@@ -4,7 +4,8 @@ import com.acmerobotics.roadrunner.Pose2d
 import com.acmerobotics.roadrunner.Time
 import com.acmerobotics.roadrunner.Twist2dDual
 
-class FuseLocation(val otosLocalizer: OTOSLocalizer, val threeWheel: ThreeDeadWheelLocalizer) : SettableLocalizer {
+class FuseLocation(val otosLocalizer: OTOSLocalizer, val threeWheel: ThreeDeadWheelLocalizer) :
+    SettableLocalizer {
     override fun setCurrentPose(pose: Pose2d) {
         otosLocalizer.setCurrentPose(pose)
         otosPose = pose

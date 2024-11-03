@@ -30,6 +30,7 @@ public class OTOSLocalizer implements SettableLocalizer {
     public static double angularScalar = 0.9914624071;
 
     SparkFunOTOS otos;
+    Pose2d lastPose = new Pose2d(0, 0, 0);
 
     public OTOSLocalizer(HardwareMap hardwareMap) {
         this.otos = hardwareMap.get(SparkFunOTOS.class, "otos");
@@ -63,13 +64,12 @@ public class OTOSLocalizer implements SettableLocalizer {
         otos.setPosition(RRPoseToOTOSPose(pose));
     }
 
-    Pose2d lastPose = new Pose2d(0,0,0);
     @Override
     public Twist2dDual<Time> update() {
         SparkFunOTOS.Pose2D otosPose = new SparkFunOTOS.Pose2D();
         SparkFunOTOS.Pose2D otosVel = new SparkFunOTOS.Pose2D();
         SparkFunOTOS.Pose2D otosAcc = new SparkFunOTOS.Pose2D();
-        otos.getPosVelAcc(otosPose,otosVel,otosAcc);
+        otos.getPosVelAcc(otosPose, otosVel, otosAcc);
         Pose2d pose = OTOSPoseToRRPose(otosPose);
         Twist2d poseDifference = pose.minus(lastPose);
         lastPose = pose;
@@ -78,16 +78,16 @@ public class OTOSLocalizer implements SettableLocalizer {
 
         return new Twist2dDual<>(
                 new Vector2dDual<>(
-                        new DualNum<>(new double[] {
+                        new DualNum<>(new double[]{
                                 poseDifference.line.x,
                                 otosVel.x
                         }),
-                        new DualNum<>(new double[] {
+                        new DualNum<>(new double[]{
                                 poseDifference.line.y,
                                 otosVel.y
                         })
                 ),
-                new DualNum<>(new double[] {
+                new DualNum<>(new double[]{
                         poseDifference.angle,
                         otosVel.h
                 })

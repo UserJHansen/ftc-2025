@@ -5,7 +5,9 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.acmerobotics.roadrunner.*;
+import com.acmerobotics.roadrunner.AccelConstraint;
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.Actions;
 import com.acmerobotics.roadrunner.AngularVelConstraint;
 import com.acmerobotics.roadrunner.DualNum;
 import com.acmerobotics.roadrunner.HolonomicController;
@@ -14,11 +16,15 @@ import com.acmerobotics.roadrunner.MinVelConstraint;
 import com.acmerobotics.roadrunner.MotorFeedforward;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Pose2dDual;
+import com.acmerobotics.roadrunner.PoseVelocity2d;
+import com.acmerobotics.roadrunner.PoseVelocity2dDual;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.ProfileParams;
 import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.TimeTrajectory;
 import com.acmerobotics.roadrunner.TimeTurn;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.TrajectoryBuilderParams;
 import com.acmerobotics.roadrunner.TurnConstraints;
 import com.acmerobotics.roadrunner.Twist2dDual;
 import com.acmerobotics.roadrunner.VelConstraint;
@@ -35,7 +41,6 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable;
 import org.firstinspires.ftc.teamcode.localization.FuseLocation;
 import org.firstinspires.ftc.teamcode.localization.OTOSLocalizer;
@@ -44,26 +49,14 @@ import org.firstinspires.ftc.teamcode.localization.ThreeDeadWheelLocalizer;
 import org.firstinspires.ftc.teamcode.messages.DriveCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.MecanumCommandMessage;
 import org.firstinspires.ftc.teamcode.messages.PoseMessage;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
 
-import java.lang.Math;
 import java.util.Arrays;
 import java.util.List;
 
 @Config
 public final class MecanumDrive implements StateLoggable {
-    @Override
-    public void logState(String uniqueName) {
-        Logging.DEBUG(uniqueName+" LEFT_FRONT_POWER", leftFront.getPower());
-        Logging.DEBUG(uniqueName+" LEFT_FRONT_CURRENT", leftFront.getCurrent(CurrentUnit.AMPS));
-        Logging.DEBUG(uniqueName+" LEFT_BACK_POWER", leftBack.getPower());
-        Logging.DEBUG(uniqueName+" LEFT_BACK_CURRENT", leftBack.getCurrent(CurrentUnit.AMPS));
-        Logging.DEBUG(uniqueName+" RIGHT_FRONT_POWER", rightFront.getPower());
-        Logging.DEBUG(uniqueName+" RIGHT_FRONT_CURRENT", rightFront.getCurrent(CurrentUnit.AMPS));
-        Logging.DEBUG(uniqueName+" RIGHT_BACK_POWER", rightBack.getPower());
-        Logging.DEBUG(uniqueName+" RIGHT_BACK_CURRENT", rightBack.getCurrent(CurrentUnit.AMPS));
-    }
-
     public static class Params {
         // IMU orientation
         // TODO: fill in these values based on
@@ -75,12 +68,13 @@ public final class MecanumDrive implements StateLoggable {
 
         // drive model parameters
         public double inPerTick = 0.0005312812;
-        public double lateralInPerTick = inPerTick;
-        public double trackWidthTicks = 25397.29475119775;
+        public double lateralInPerTick = 0.0004686145395153341;
+        public double trackWidthTicks = 23271.67529708481;
 
         // feedforward parameters (in tick units)
-        public double kS = 2.0;
-        public double kV = 0.00008509325142164417;
+        // First is the Forward, Second is the Lateral kV
+        public double kS = (2.0880871090673025 + 3.1) / 2;
+        public double kV = 0.00008494697400188092;
         public double kA = 0.00002;
 
         // path profile parameters (in inches)
@@ -101,12 +95,9 @@ public final class MecanumDrive implements StateLoggable {
         public double lateralVelGain = 0.0;
         public double headingVelGain = 0.0; // shared with turn
     }
-
     public static Params PARAMS = new Params();
-
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
-
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
     public final VelConstraint defaultVelConstraint =
@@ -116,22 +107,16 @@ public final class MecanumDrive implements StateLoggable {
             ));
     public final AccelConstraint defaultAccelConstraint =
             new ProfileAccelConstraint(PARAMS.minProfileAccel, PARAMS.maxProfileAccel);
-
     public final DcMotorEx leftFront, leftBack, rightBack, rightFront;
-
     public final VoltageSensor voltageSensor;
-
     public final LazyImu lazyImu;
-
     public final RollbackLocalizer localizer;
     public final FuseLocation fusedLocation;
     public final ThreeDeadWheelLocalizer deadWheelLocalizer;
     public final OTOSLocalizer otosLocalizer;
-
     private final DownsampledWriter targetPoseWriter = new DownsampledWriter("TARGET_POSE", 50_000_000);
     private final DownsampledWriter driveCommandWriter = new DownsampledWriter("DRIVE_COMMAND", 50_000_000);
     private final DownsampledWriter mecanumCommandWriter = new DownsampledWriter("MECANUM_COMMAND", 50_000_000);
-
     public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
         LynxFirmware.throwIfModulesAreOutdated(hardwareMap);
 
@@ -158,8 +143,6 @@ public final class MecanumDrive implements StateLoggable {
         rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        // TODO: make sure your config has an IMU with this name (can be BNO or BHI)
-        //   see https://ftc-docs.firstinspires.org/en/latest/hardware_and_software_configuration/configuring/index.html
         lazyImu = new LazyImu(hardwareMap, "imu", new RevHubOrientationOnRobot(
                 PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
 
@@ -172,6 +155,18 @@ public final class MecanumDrive implements StateLoggable {
         this.localizer.setCurrentPose(pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
+    }
+
+    @Override
+    public void logState(String uniqueName) {
+        Logging.DEBUG(uniqueName + " LEFT_FRONT_POWER", leftFront.getPower());
+        Logging.DEBUG(uniqueName + " LEFT_FRONT_CURRENT", leftFront.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName + " LEFT_BACK_POWER", leftBack.getPower());
+        Logging.DEBUG(uniqueName + " LEFT_BACK_CURRENT", leftBack.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName + " RIGHT_FRONT_POWER", rightFront.getPower());
+        Logging.DEBUG(uniqueName + " RIGHT_FRONT_CURRENT", rightFront.getCurrent(CurrentUnit.AMPS));
+        Logging.DEBUG(uniqueName + " RIGHT_BACK_POWER", rightBack.getPower());
+        Logging.DEBUG(uniqueName + " RIGHT_BACK_CURRENT", rightBack.getCurrent(CurrentUnit.AMPS));
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {
@@ -208,11 +203,51 @@ public final class MecanumDrive implements StateLoggable {
         return velocity;
     }
 
+    public PoseVelocity2d updatePoseEstimate() {
+        Twist2dDual<Time> twist = localizer.update();
+
+        return twist.velocity().value();
+    }
+
+    public TrajectoryActionBuilder actionBuilder(Pose2d beginPose) {
+        return new TrajectoryActionBuilder(
+                TurnAction::new,
+                FollowTrajectoryAction::new,
+                new TrajectoryBuilderParams(
+                        1e-6,
+                        new ProfileParams(
+                                0.25, 0.1, 1e-2
+                        )
+                ),
+                beginPose, 0.0,
+                defaultTurnConstraints,
+                defaultVelConstraint, defaultAccelConstraint
+        );
+    }
+
+    public TrajectoryActionBuilder allianceActionBuilder(Pose2d beginPose) {
+        return new TrajectoryActionBuilder(
+                TurnAction::new,
+                FollowTrajectoryAction::new,
+                new TrajectoryBuilderParams(
+                        1e-6,
+                        new ProfileParams(
+                                0.25, 0.1, 1e-2
+                        )
+                ),
+                beginPose, 0.0,
+                defaultTurnConstraints,
+                defaultVelConstraint, defaultAccelConstraint,
+                PoseStorage.isRedAlliance ? pose -> pose
+                        : pose -> new Pose2dDual<>(
+                        pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
+        );
+    }
+
     public final class FollowTrajectoryAction implements Action {
         public final TimeTrajectory timeTrajectory;
-        private double beginTs = -1;
-
         private final double[] xPoints, yPoints;
+        private double beginTs = -1;
 
         public FollowTrajectoryAction(TimeTrajectory t) {
             timeTrajectory = t;
@@ -377,46 +412,5 @@ public final class MecanumDrive implements StateLoggable {
             c.setStroke("#7C4DFF7A");
             c.fillCircle(turn.beginPose.position.x, turn.beginPose.position.y, 2);
         }
-    }
-
-    public PoseVelocity2d updatePoseEstimate() {
-        Twist2dDual<Time> twist = localizer.update();
-
-        return twist.velocity().value();
-    }
-
-    public TrajectoryActionBuilder actionBuilder(Pose2d beginPose) {
-        return new TrajectoryActionBuilder(
-                TurnAction::new,
-                FollowTrajectoryAction::new,
-                new TrajectoryBuilderParams(
-                        1e-6,
-                        new ProfileParams(
-                                0.25, 0.1, 1e-2
-                        )
-                ),
-                beginPose, 0.0,
-                defaultTurnConstraints,
-                defaultVelConstraint, defaultAccelConstraint
-        );
-    }
-
-    public TrajectoryActionBuilder allianceActionBuilder(Pose2d beginPose) {
-        return new TrajectoryActionBuilder(
-                TurnAction::new,
-                FollowTrajectoryAction::new,
-                new TrajectoryBuilderParams(
-                        1e-6,
-                        new ProfileParams(
-                                0.25, 0.1, 1e-2
-                        )
-                ),
-                beginPose, 0.0,
-                defaultTurnConstraints,
-                defaultVelConstraint, defaultAccelConstraint,
-                PoseStorage.isRedAlliance ? pose -> pose
-                        : pose -> new Pose2dDual<>(
-                        pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
-        );
     }
 }

@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential
+import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout
 import org.firstinspires.ftc.teamcode.galahlib.actions.race
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.DigitalInput
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.DistanceTrigger
@@ -32,7 +33,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var topBasket = 27.0
 
             @JvmField
-            var topSpecimen = 14.5
+            var topSpecimen = 18.0
+
+            @JvmField
+            var parkHeight = 12.0
         }
 
         class GrabberLimits {
@@ -54,7 +58,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var specimen = 0.45
 
             @JvmField
-            var transfer = 0.02
+            var transfer = 0.03
+
+            @JvmField
+            var transferSafe = 0.00
         }
 
         class WristLimits {
@@ -65,10 +72,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var deposit = 0.35
 
             @JvmField
-            var specimen = 0.3
+            var specimen = 0.35
 
             @JvmField
-            var transfer = 0.57
+            var transfer = 0.54
 
             @JvmField
             var transferSafe = 0.35
@@ -81,7 +88,8 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     companion object {
-        @JvmStatic val PARAMS = Params()
+        @JvmStatic
+        val PARAMS = Params()
     }
 
     val lift = Lift(hardwareMap, "outtakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Outake)
@@ -98,7 +106,8 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             PARAMS.elbowLimits.intake,
             PARAMS.elbowLimits.deposit,
             PARAMS.elbowLimits.specimen,
-            PARAMS.elbowLimits.transfer
+            PARAMS.elbowLimits.transfer,
+            PARAMS.elbowLimits.transferSafe,
         ), 1.17
     )
     val wrist = ServoMultiState(
@@ -129,6 +138,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                 InstantAction {
                     outtakeActionWriter.write(StringMessage("MOVE_ARM_TRANSFER"))
                 },
+                grabber.setPosition(0),
                 wrist.setPosition(3),
                 elbow.setPosition(3),
                 SleepAction(0.3)
@@ -150,25 +160,34 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     InstantAction {
                         outtakeActionWriter.write(StringMessage("PICKUP_INTERNAL_SAMPLE"))
                     },
+                    grabber.setPosition(0),
+                    readyForTransfer(),
                     race(
                         SequentialAction(
+                            elbow.setPosition(4),
+                            wrist.setPosition(4),
+                            elbow.setPosition(0),
+                            wrist.setPosition(0),
                             grabber.setPosition(1),
+                            grabber.setPosition(0),
+
+                            grabber.setPosition(1),
+
                             ParallelAction(
                                 elbow.setPosition(0),
                                 wrist.setPosition(0),
-                                SleepAction(0.1)
                             ),
                             readyForTransfer(),
+
                             ParallelAction(
                                 elbow.setPosition(0),
                                 wrist.setPosition(0),
-                                SleepAction(0.1)
                             ),
                             readyForTransfer(),
+
                             ParallelAction(
                                 elbow.setPosition(0),
                                 wrist.setPosition(0),
-                                SleepAction(0.1)
                             ),
                             readyForTransfer(),
                         ),
@@ -176,9 +195,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     ),
                     grabber.setPosition(0),
                     SequentialAction(
-                        elbow.setPosition(0),
+                        elbow.setPosition(4),
                         wrist.setPosition(4),
                         SleepAction(0.25),
+                        elbow.setPosition(0),
                         wrist.setPosition(0),
                         SleepAction(0.25),
                     ),
@@ -200,7 +220,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                 ParallelAction(
                     elbow.setPosition(1),
                     wrist.setPosition(1),
-                    lift.gotoDistance(PARAMS.liftPositions.topBasket)
+                    Timeout(
+                        lift.gotoDistance(PARAMS.liftPositions.topBasket),
+                        2000.0
+                    ),
                 )
             ),
         )
@@ -235,14 +258,14 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("SPECIMEN_READY"))
             }),
-            lift.gotoDistance(3.0),
+            lift.gotoDistance(4.0),
             Loggable(
                 "MOVE_ARM_OUT", ParallelAction(
                     elbow.setPosition(2),
                     wrist.setPosition(2)
                 )
             ),
-            lift.gotoDistance(0.1),
+            lift.gotoDistance(2.0),
         )
     }
 
@@ -263,8 +286,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("GRAB_SPECIMEN", ParallelAction(InstantAction {
                 outtakeActionWriter.write(StringMessage("GRAB_SPECIMEN"))
             }, grabber.setPosition(1))),
-            lift.gotoDistance(3.0),
-            Loggable("WAIT_FOR_ESCAPE", SleepAction(2.0)),
+            Loggable("MOVE_ARM_OUT", ParallelAction(elbow.setPosition(1), wrist.setPosition(1))),
             lift.gotoDistance(PARAMS.liftPositions.topSpecimen)
         )
     }
@@ -274,9 +296,12 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             "PLACE_SPECIMEN",
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("PLACE_SPECIMEN"))
+                lift.liftMotor.setPositionPIDFCoefficients(10.0)
             }),
-            lift.gotoDistance(PARAMS.liftPositions.topSpecimen - 2),
-            Loggable("HOPE_LIFTS_CATCH_UP_AND_RELEASED", SleepAction(2.0)),
+            lift.gotoDistance(PARAMS.liftPositions.topSpecimen - 6),
+            Loggable(
+                "PID_NORMAL",
+                InstantAction { lift.liftMotor.setPositionPIDFCoefficients(PARAMS.P_Outake) }),
             Loggable("LET_GO", grabber.setPosition(0)),
             Loggable(
                 "MOVE_ARM_IN", ParallelAction(
@@ -294,7 +319,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("ABORT_SPECIMEN"))
             }),
-            lift.gotoDistance(3.0),
+            lift.gotoDistance(4.0),
             Loggable(
                 "MOVE_ARM_IN", ParallelAction(
                     elbow.setPosition(0),
@@ -302,6 +327,22 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                 )
             ),
             lift.gotoDistance(0.0),
+        )
+    }
+
+    fun gotoPark(): LoggableAction {
+        return Loggable(
+            "MOVE_TO_PARK",
+            ParallelAction(
+                lift.gotoDistance(PARAMS.liftPositions.parkHeight),
+                SequentialAction(
+                    SleepAction(0.5),
+                    ParallelAction(
+                        wrist.setPosition(1),
+                        elbow.setPosition(1),
+                    )
+                )
+            )
         )
     }
 

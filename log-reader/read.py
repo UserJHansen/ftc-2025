@@ -266,7 +266,6 @@ if __name__ == '__main__':
 
     print(channel_names)
 
-
     schemas = dict((k, v) for k, v in schemas.items() if k in channel_names)
     messages = dict((k, v) for k, v in messages.items() if k in channel_names)
     
@@ -277,11 +276,9 @@ if __name__ == '__main__':
 
     # Print config data
     print("Config Data:", config)
-    print(timeline)
 
     # Plot timeline and line graphs
     plt.ion()
-    print(timeline_events)
     plot_timeline(timeline, timeline_events)
     plot_line_graphs(line_graphs)
     plt.show(block=True)

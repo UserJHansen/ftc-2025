@@ -12,9 +12,10 @@ import org.firstinspires.ftc.teamcode.messages.StringMessage;
 
 @Config
 public class Logging {
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
 
     public static Telemetry telemetry;
+    static ElapsedTime timer = new ElapsedTime();
 
     public static <T> void DEBUG(String caption, T data) {
         if (data.getClass() == String.class) {
@@ -54,7 +55,6 @@ public class Logging {
         telemetry.addLine(caption);
     }
 
-    static ElapsedTime timer = new ElapsedTime();
     public static void update() {
         double elapsedTime = timer.milliseconds();
         timer.reset();

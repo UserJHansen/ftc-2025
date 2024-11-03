@@ -8,7 +8,12 @@ import com.acmerobotics.roadrunner.Pose2d;
  * A static field allows data to persist between opmodes.
  */
 public class PoseStorage {
-    public static Pose2d currentPose = new Pose2d(0, 0, Math.PI);
+    public static Pose2d currentPose = new Pose2d(0, 0, 0);
 
     public static boolean isRedAlliance = false;
+    public static boolean isInit = true;
+
+    public static boolean splitControls = false;
+
+    public static boolean shouldHallucinate = false;
 }

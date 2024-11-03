@@ -2,35 +2,19 @@ package org.firstinspires.ftc.teamcode.opmodes;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.galahlib.Button;
+import org.firstinspires.ftc.teamcode.staticData.Logging;
 
 @TeleOp(group = "testing", name = "Motor Identifier Test")
+@Disabled
 public class MotorIdentifier extends LinearOpMode {
-    public enum TestDevice {
-        Motor,
-        Servo;
-
-        static {
-            Motor.next = Servo;
-            Motor.previous = Servo;
-            Motor.maxId = 3;
-            Servo.next = Motor;
-            Servo.previous = Motor;
-            Servo.maxId = 5;
-        };
-
-        public TestDevice next;
-        public TestDevice previous;
-        public int maxId;
-    }
-
     public int hubNumber = 0;
     public int motorNumber = 0;
     public TestDevice deviceToTest = TestDevice.Motor;
@@ -69,13 +53,13 @@ public class MotorIdentifier extends LinearOpMode {
             double power = gamepad1.right_trigger - gamepad1.left_trigger;
             switch (this.deviceToTest) {
                 case Motor:
-                    DcMotorEx motor = hardwareMap.get(DcMotorEx.class, "H"+hubNumber+"M"+motorNumber);
+                    DcMotorEx motor = hardwareMap.get(DcMotorEx.class, "H" + hubNumber + "M" + motorNumber);
                     motor.setPower(power);
-                    Logging.LOG("Motor Current Draw",motor.getCurrent(CurrentUnit.AMPS));
-                    Logging.LOG("Motor Position",motor.getCurrentPosition());
+                    Logging.LOG("Motor Current Draw", motor.getCurrent(CurrentUnit.AMPS));
+                    Logging.LOG("Motor Position", motor.getCurrentPosition());
                     break;
                 case Servo:
-                    Servo servo = hardwareMap.get(Servo.class, "H"+hubNumber+"S"+motorNumber);
+                    Servo servo = hardwareMap.get(Servo.class, "H" + hubNumber + "S" + motorNumber);
                     servo.setPosition(power);
                     break;
             }
@@ -90,5 +74,23 @@ public class MotorIdentifier extends LinearOpMode {
 
             Logging.update();
         }
+    }
+
+    public enum TestDevice {
+        Motor,
+        Servo;
+
+        static {
+            Motor.next = Servo;
+            Motor.previous = Servo;
+            Motor.maxId = 3;
+            Servo.next = Motor;
+            Servo.previous = Motor;
+            Servo.maxId = 5;
+        }
+
+        public TestDevice next;
+        public TestDevice previous;
+        public int maxId;
     }
 }

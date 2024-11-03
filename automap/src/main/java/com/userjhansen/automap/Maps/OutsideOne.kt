@@ -5,10 +5,10 @@ import com.userjhansen.automap.AutoPart
 import com.userjhansen.automap.PartType
 
 class OutsideOne : Map {
-    override val startPosition = Pose2d(15.0, -60.0, -Math.PI / 2)
+    override val startPosition = Pose2d(15.0, -62.0, -Math.PI / 2)
 
-    override val specimenPosition = Pose2d(9.0, -32.0, 0.0)
-    override val depositPosition = Pose2d(-46.0, -58.0, Math.PI / 16);
+    override val specimenPosition = Pose2d(6.0, -34.0, 0.0)
+    override val depositPosition = Pose2d(-46.0, -58.0, Math.PI / 16)
 
     override val intakeParts = arrayOf(
         arrayOf(
@@ -29,9 +29,9 @@ class OutsideOne : Map {
     )
 
     override val parkParts = arrayOf(
-        AutoPart(PartType.STRAFE, Pose2d(0.0, -50.0, 0.0)),
+        AutoPart(PartType.STRAFE_TO, Pose2d(0.0, -50.0, 0.0)),
         AutoPart(PartType.STRAFE, Pose2d(45.0, -30.0, 0.0)),
-        AutoPart(PartType.STRAFE, Pose2d(45.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(24.0, -10.0, 0.0)),
+        AutoPart(PartType.STRAFE, Pose2d(45.0, -13.0, 0.0)),
+        AutoPart(PartType.STRAFE_TO, Pose2d(24.0, -13.0, 0.0)),
     )
 }
