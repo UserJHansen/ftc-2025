@@ -281,6 +281,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                     },
                     transfer(),
                     stopTransfer(),
+                    SleepAction(1.0),
                     pullServo.setSpeed(0.0),
                 )
             )
