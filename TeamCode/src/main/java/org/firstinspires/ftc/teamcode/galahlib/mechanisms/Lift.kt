@@ -23,6 +23,7 @@ import org.firstinspires.ftc.teamcode.staticData.Logging
 import org.firstinspires.ftc.teamcode.staticData.PoseStorage
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.max
 
 @Config
 class Lift @JvmOverloads constructor(
@@ -39,6 +40,7 @@ class Lift @JvmOverloads constructor(
 
     @JvmField
     val liftMotor = hardwareMap.get(DcMotorEx::class.java, name)
+
     @JvmField
     var targetDistance: Double = 0.0
 
@@ -107,7 +109,8 @@ class Lift @JvmOverloads constructor(
         }
     }
 
-    fun gotoDistance(distance: Double): LoggableAction {
+    @JvmOverloads
+    fun gotoDistance(distance: Double, tolerance: Double = Companion.tolerance): LoggableAction {
         return object : LoggableAction {
             override val name: String
                 get() = "$lastName GOTO_DISTANCE_$targetDistance"
@@ -117,7 +120,7 @@ class Lift @JvmOverloads constructor(
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
                     liftMotor.power = 1.0
-                    targetDistance = if (distance != 0.0) distance else tolerance
+                    targetDistance = max(distance, 0.1)
                     liftActionWriter.write(StringMessage("$lastName GOTO_DISTANCE"))
 
                     timeout = Deadline(
@@ -134,7 +137,7 @@ class Lift @JvmOverloads constructor(
                     return true
                 }
 
-                if (abs(targetDistance - 0.0) < tolerance) {
+                if (abs(targetDistance - 0.0) < Companion.tolerance) {
 //                    Target is 0, set power low
                     liftMotor.power = 0.1
                 }

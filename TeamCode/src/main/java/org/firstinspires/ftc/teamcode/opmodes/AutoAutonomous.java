@@ -130,7 +130,6 @@ public class AutoAutonomous extends LinearOpMode {
                 "INTAKE_CAPTURE",
                 new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
                         intake.transfer(),
-                        outtake.waitForTransfer(),
                         new SleepAction(0.75)
                 )), 3.0),
                 intake.stopTransfer(),
@@ -145,14 +144,14 @@ public class AutoAutonomous extends LinearOpMode {
 
         builder = addParts(builder, map.getIntakeParts()[0])
                 .afterTime(1, new ParallelAction(intake.captureSample(true, true),
-                        outtake.readyForTransfer()))
+                        outtake.readyForIntake()))
                 .stopAndAdd(getCapture.run());
         builder = addParts(builder, map.getDepositParts())
                 .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());
 
         builder = addParts(builder, map.getIntakeParts()[1])
                 .afterTime(1, new ParallelAction(intake.captureSample(true, true),
-                        new SequentialAction(outtake.retractArm(), outtake.readyForTransfer())))
+                        new SequentialAction(outtake.retractArm(), outtake.readyForIntake())))
                 .stopAndAdd(getCapture.run());
         builder = addParts(builder, map.getDepositParts())
                 .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());
@@ -175,7 +174,7 @@ public class AutoAutonomous extends LinearOpMode {
                             builder = builder.fresh();
                             builder = addParts(builder, map.getIntakeParts()[2])
                                     .afterTime(1, new ParallelAction(intake.captureSample(true),
-                                            outtake.readyForTransfer()))
+                                            outtake.readyForIntake()))
                                     .stopAndAdd(getCapture.run());
                             builder = addParts(builder, map.getDepositParts())
                                     .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());

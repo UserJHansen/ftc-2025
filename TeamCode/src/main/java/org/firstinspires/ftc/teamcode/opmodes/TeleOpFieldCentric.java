@@ -11,7 +11,6 @@ import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
 import com.acmerobotics.roadrunner.Rotation2d;
-import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -22,7 +21,6 @@ import org.firstinspires.ftc.teamcode.galahlib.Button;
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction;
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential;
-import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
 import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
@@ -163,6 +161,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
             if (sampleState == SampleState.SpecimenIntake && (sampleAction == null || sampleAction.getName().equals("CANCELABLE_ADJUST"))) {
                 double change = secondsPassed * 2 * (PoseStorage.splitControls ? gamepad2.right_trigger - gamepad2.left_trigger : gamepad1.right_trigger - gamepad1.left_trigger);
                 Outtake.Companion.getPARAMS().getLiftPositions().topSpecimen += change;
+                Logging.LOG("NEW_POSITION", Outtake.Companion.getPARAMS().getLiftPositions().topSpecimen);
                 sampleAction = new Loggable("CANCELABLE_ADJUST", outtake.getLift().gotoDistance(Outtake.Companion.getPARAMS().getLiftPositions().topSpecimen));
             }
 
@@ -172,22 +171,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
 
                 if (!sampleAction.run(p)) {
                     Logging.LOG("SAMPLE_ACTION_FINISHED");
-                    if (sampleState == SampleState.Intaking) {
-                        sampleState = SampleState.Transferring;
-                        sampleAction = new LoggingSequential(
-                                "TRANSFERRING",
-                                outtake.readyForTransfer(),
-                                new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
-                                        intake.transfer(),
-                                        outtake.waitForTransfer(),
-                                        new SleepAction(0.75)
-                                )), 3.0),
-                                intake.stopTransfer(),
-                                outtake.pickupInternalSample()
-                        );
-                    } else {
-                        sampleAction = null;
-                    }
+                    sampleAction = null;
                 }
             }
 
@@ -201,7 +185,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 sampleAction = new Loggable(
                         "INTAKE",
                         new ParallelAction(
-                                outtake.readyForTransfer(),
+                                outtake.readyForIntake(),
                                 intake.captureSample(true, true)
                         )
                 );
@@ -212,13 +196,16 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 switch (sampleState) {
                     case Waiting:
                         Logging.LOG("Running capture sequence");
-                        sampleAction = new Loggable("INTAKE", new ParallelAction(
-                                outtake.readyForTransfer(),
-                                intake.captureSample(true)
-                        ));
+                        sampleAction = new LoggingSequential("INTAKE_SEQUENCE",
+                                new Loggable("INTAKE", new ParallelAction(
+                                        outtake.readyForIntake(),
+                                        intake.captureSample(true)
+                                )),
+                                outtake.pickupInternalSample()
+                        );
                         sampleState = SampleState.Intaking;
                         break;
-                    case Transferring:
+                    case Intaking:
                         Logging.LOG("Running deploy sequence");
                         sampleAction = outtake.topBasket();
                         sampleState = SampleState.Outtaking;
@@ -246,7 +233,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
                 }
             }
 
-            if ((PoseStorage.splitControls ? gamepad2 : gamepad1).start && (sampleState == SampleState.Intaking || sampleState == SampleState.Transferring)) {
+            if ((PoseStorage.splitControls ? gamepad2 : gamepad1).start && (sampleState == SampleState.Intaking)) {
                 sampleState = SampleState.Waiting;
                 sampleAction = intake.retractSlides();
             }
@@ -262,14 +249,8 @@ public class TeleOpFieldCentric extends LinearOpMode {
                     case Intaking: // Probably a false grab?
                         sampleAction = new LoggingSequential(
                                 "INTAKE",
-                                outtake.readyForTransfer(),
-                                intake.captureSample(false)
-                        );
-                        break;
-                    case Transferring:
-                        sampleAction = new LoggingSequential(
-                                "INTAKE_CAPTURE",
-                                intake.stopTransfer(),
+                                outtake.readyForIntake(),
+                                intake.captureSample(false),
                                 outtake.pickupInternalSample()
                         );
                         break;
@@ -298,7 +279,6 @@ public class TeleOpFieldCentric extends LinearOpMode {
     enum SampleState {
         Waiting,
         Intaking,
-        Transferring,
         Outtaking,
         ReturnArm,
 
