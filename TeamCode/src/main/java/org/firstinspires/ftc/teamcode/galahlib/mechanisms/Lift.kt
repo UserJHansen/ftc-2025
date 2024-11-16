@@ -119,7 +119,6 @@ class Lift @JvmOverloads constructor(
 
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
-                    liftMotor.power = 1.0
                     targetDistance = max(distance, 0.1)
                     liftActionWriter.write(StringMessage("$lastName GOTO_DISTANCE"))
 
@@ -128,6 +127,8 @@ class Lift @JvmOverloads constructor(
                         TimeUnit.SECONDS
                     )
                     liftMotor.targetPosition = (targetDistance * ticksPerInch).toInt()
+                    liftMotor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
+                    liftMotor.power = 1.0
                     initialized = true
                 }
 
@@ -137,9 +138,10 @@ class Lift @JvmOverloads constructor(
                     return true
                 }
 
-                if (abs(targetDistance - 0.0) < Companion.tolerance) {
-//                    Target is 0, set power low
-                    liftMotor.power = 0.1
+                if (abs(targetDistance - 0.0) < Companion.tolerance && abs(targetDistance - currentPosition) < Companion.tolerance) {
+//                    Target is 0, and we're there, turn off the motor
+                    liftMotor.power = 0.0
+                    liftMotor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
                 }
                 return false
             }
