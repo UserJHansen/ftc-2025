@@ -49,6 +49,7 @@ class Lift @JvmOverloads constructor(
     private fun initMotor() {
         liftMotor.targetPosition = 0
         liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
+        liftMotor.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
         liftMotor.power = 0.1
         liftMotor.targetPositionTolerance = (tolerance * ticksPerInch).toInt()
     }
