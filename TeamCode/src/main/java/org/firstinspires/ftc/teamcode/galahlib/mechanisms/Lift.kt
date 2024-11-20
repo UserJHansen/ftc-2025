@@ -128,8 +128,9 @@ class Lift @JvmOverloads constructor(
                         TimeUnit.SECONDS
                     )
                     liftMotor.targetPosition = (targetDistance * ticksPerInch).toInt()
-                    liftMotor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
-                    liftMotor.power = 1.0
+                    if (!lockedOut)
+                        liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
+
                     initialized = true
                 }
 
@@ -149,40 +150,76 @@ class Lift @JvmOverloads constructor(
         }
     }
 
-    fun slideBetween(
-        startPosition: Double,
-        endPosition: Double,
-        time: Double,
-        units: TimeUnit = TimeUnit.SECONDS
-    ): Action {
-        return object : Action {
-            val startTime = units.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
+
+    fun interface DoubleProvider {
+        fun run(): Double
+    }
+
+    fun holdVariablePosition(positionProvider: DoubleProvider): LoggableAction {
+        return object : LoggableAction {
+            override val name: String
+                get() = "$lastName HOLD_USER_DISTANCE"
             var initialized = false
+
             override fun run(p: TelemetryPacket): Boolean {
                 if (!initialized) {
-                    liftActionWriter.write(StringMessage("$lastName SLIDING_BETWEEN"))
+                    liftActionWriter.write(StringMessage("$lastName HOLD_USER_DISTANCE"))
+                    liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
                     initialized = true
                 }
 
-                val currentTime = units.convert(System.nanoTime(), TimeUnit.NANOSECONDS)
-
-                liftMotor.targetPosition =
-                    ((((endPosition - startPosition) * (currentTime - startTime) / time) + startPosition) * ticksPerInch).toInt()
                 liftPoseWriter.write(DoubleMessage(currentPosition))
 
-                return currentTime - startTime < time
+                if (!lockedOut) {
+                    liftMotor.targetPosition = (positionProvider.run() * ticksPerInch).toInt()
+                }
+
+                return liftMotor.targetPosition != 0
             }
         }
     }
 
+    fun goToThroughWhile(
+        distance: Double,
+        throughPoint: Double,
+        action: LoggableAction,
+        tolerance: Double = Companion.tolerance
+    ): LoggableAction {
+        return object : LoggableAction {
+            val goingUp = distance - throughPoint > 0
+            val activateThrough: Boolean
+                get() = (currentPosition < throughPoint) xor !goingUp
+
+            override val name: String
+                get() = "$lastName GO_TO_${distance}_THROUGH_${throughPoint}_${if (activateThrough) "ACTIVATED" else "MOVING"}"
+
+            val gotoAction = gotoDistance(distance, tolerance)
+            var throughCompleted = false
+            var toCompleted = false
+
+            override fun run(p: TelemetryPacket): Boolean {
+                if (activateThrough && !throughCompleted) {
+                    action.run(p)
+                }
+
+                return gotoAction.run(p)
+            }
+        }
+    }
+
+    var lockedOut = true
     fun lockout() {
         liftMotor.power = 0.0
+        liftMotor.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
+        lockedOut = true
     }
 
     fun unlock() {
         if (abs(targetDistance - 0.0) > tolerance) {
             liftMotor.power = 1.0
+            liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
         }
+        lockedOut = false
     }
 
     var lastName = ""

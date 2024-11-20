@@ -139,19 +139,19 @@ public class AutoAutonomous extends LinearOpMode {
         driveBase.localizer.setCurrentPose(map.getStartPosition());
 
         builder = builder.strafeTo(map.getSpecimenPosition().position)
-                .afterDisp(0, outtake.grabSpecimen())
+                .afterDisp(0, outtake.grabber(false))
                 .stopAndAdd(outtake.placeSpecimen());
 
         builder = addParts(builder, map.getIntakeParts()[0])
-                .afterTime(1, new ParallelAction(intake.captureSample(true, true),
-                        outtake.readyForIntake()))
+                .afterTime(1, new ParallelAction(intake.captureSample(true),
+                        outtake.homePosition()))
                 .stopAndAdd(getCapture.run());
         builder = addParts(builder, map.getDepositParts())
                 .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());
 
         builder = addParts(builder, map.getIntakeParts()[1])
-                .afterTime(1, new ParallelAction(intake.captureSample(true, true),
-                        new SequentialAction(outtake.retractArm(), outtake.readyForIntake())))
+                .afterTime(1, new ParallelAction(intake.captureSample(true),
+                        new SequentialAction(outtake.retractArm(), outtake.homePosition())))
                 .stopAndAdd(getCapture.run());
         builder = addParts(builder, map.getDepositParts())
                 .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());
@@ -174,7 +174,7 @@ public class AutoAutonomous extends LinearOpMode {
                             builder = builder.fresh();
                             builder = addParts(builder, map.getIntakeParts()[2])
                                     .afterTime(1, new ParallelAction(intake.captureSample(true),
-                                            outtake.readyForIntake()))
+                                            outtake.homePosition()))
                                     .stopAndAdd(getCapture.run());
                             builder = addParts(builder, map.getDepositParts())
                                     .afterTime(0, outtake.topBasket()).stopAndAdd(outtake.dropSample());

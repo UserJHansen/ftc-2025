@@ -13,7 +13,7 @@ public class PoseStorage {
     public static boolean isRedAlliance = false;
     public static boolean isInit = true;
 
-    public static boolean splitControls = false;
+    public static boolean splitControls = true;
 
     public static boolean shouldHallucinate = false;
 }

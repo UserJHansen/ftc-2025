@@ -139,7 +139,7 @@ public class SmallAuto extends LinearOpMode {
                 map.getStartPosition().heading.inverse().toDouble())
         );
 
-        builder = builder.stopAndAdd(outtake.grabSpecimen()).strafeTo(map.getSpecimenPosition().position)
+        builder = builder.stopAndAdd(outtake.grabber(false)).strafeTo(map.getSpecimenPosition().position)
                 .stopAndAdd(new SequentialAction(
                         new InstantAction(() -> outtake.getLift().liftMotor.setPositionPIDFCoefficients(10.0)),
                         outtake.getLift().gotoDistance(12),

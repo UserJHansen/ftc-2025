@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap
 
 class DigitalInput(hardwareMap: HardwareMap, name: String) {
     val input = hardwareMap.get(DigitalChannel::class.java, name)
+    val triggered = input.state
 
     fun until(state: Boolean): Action {
         return object : Action {

@@ -12,7 +12,7 @@ import org.firstinspires.ftc.teamcode.messages.StringMessage;
 
 @Config
 public class Logging {
-    public static boolean DEBUG = false;
+    public static boolean DEBUG = true;
 
     public static Telemetry telemetry;
     static ElapsedTime timer = new ElapsedTime();

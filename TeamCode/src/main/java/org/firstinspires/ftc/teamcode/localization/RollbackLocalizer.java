@@ -25,11 +25,19 @@ public class RollbackLocalizer implements SettableLocalizer {
     private final DownsampledWriter estimatedPoseWriter = new DownsampledWriter("ESTIMATED_POSE", 50_000_000);
     public Pose2d currentPose = new Pose2d(0, 0, 0);
     public Pose2d oldestPose = new Pose2d(0, 0, 0); // Used in path history drawing
-    SettableLocalizer sourceLocalizer;
+    Localizer sourceLocalizer;
+    private boolean settable;
+
     Map<Long, Twist2d> poseDiffs = new TreeMap<>();
 
     public RollbackLocalizer(SettableLocalizer sourceLocalizer) {
         this.sourceLocalizer = sourceLocalizer;
+        settable = true;
+    }
+
+    public RollbackLocalizer(Localizer sourceLocalizer) {
+        this.sourceLocalizer = sourceLocalizer;
+        settable = false;
     }
 
     public void newDelayedVisionPose(@NonNull Pose2d newPose, double pipelineLatency) {
@@ -64,7 +72,8 @@ public class RollbackLocalizer implements SettableLocalizer {
         this.poseDiffs = new HashMap<>();
         this.currentPose = currentPose;
         this.oldestPose = currentPose;
-        this.sourceLocalizer.setCurrentPose(currentPose);
+        if (settable)
+            ((SettableLocalizer) this.sourceLocalizer).setCurrentPose(currentPose);
     }
 
     @Override

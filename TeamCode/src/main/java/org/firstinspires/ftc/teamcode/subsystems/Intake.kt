@@ -19,8 +19,6 @@ import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggingSequential
-import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout
-import org.firstinspires.ftc.teamcode.galahlib.actions.doWhile
 import org.firstinspires.ftc.teamcode.galahlib.actions.race
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.ContinuousServo
 import org.firstinspires.ftc.teamcode.galahlib.mechanisms.DigitalInput
@@ -36,7 +34,7 @@ import kotlin.math.max
 class Intake(hardwareMap: HardwareMap) : StateLoggable {
     companion object PARAMS {
         @JvmField // Forward intake power
-        var P_Intake: Double = 5.0
+        var P_Intake: Double = 10.0
 
         @JvmField // Speed while intaking, if it is flying past lower this number
         var speed = 0.8
@@ -58,9 +56,6 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
 
         @JvmField
         var maxExtension = 11.0
-
-        @JvmField
-        var extendTime = 5.0 // Over seconds
 
         class FlipLimits {
             @JvmField
@@ -101,7 +96,6 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     val distanceSensor = hardwareMap.get(Rev2mDistanceSensor::class.java, "intakeDistance")
 
     init {
-//        FlightRecorder.write("INTAKE_PARAMS", PARAMS.javaClass)
         motor.zeroPowerBehavior = DcMotor.ZeroPowerBehavior.BRAKE
     }
 
@@ -152,37 +146,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         )
     }
 
-    fun extendSlides(): LoggableAction {
-        return LoggingSequential(
-            "EXTEND_INTAKE",
-            slides.gotoDistance(minExtension),
-            Loggable("FLIP_INTAKE_FINISH_DEPLOY", flipServo.setPosition(true))
-        )
-    }
-
-    fun crawlForward(extendTime: Double = PARAMS.extendTime): LoggableAction {
-        return Loggable(
-            "CRAWL_FORWARD_INTAKE", ParallelAction(
-                InstantAction {
-                    Logging.LOG("CRAWL_FORWARD")
-                },
-                slides.slideBetween(minExtension, maxExtension, extendTime)
-            )
-        )
-    }
-
-    fun crawlBackward(): LoggableAction {
-        return Loggable(
-            "CRAWL_BACKWARD_INTAKE", ParallelAction(
-                InstantAction {
-                    Logging.LOG("CRAWL_BACKWARD")
-                },
-                slides.gotoDistance((maxExtension + minExtension) / 2)
-            )
-        )
-    }
-
-    fun pickSampleForward(): LoggableAction {
+    fun pickSampleForward(shared: Boolean): LoggableAction {
         return object : LoggableAction {
             var captureTimeout: Deadline? = null
             override val name: String
@@ -201,7 +165,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                 if (!distanceTriggered) { // No Sample
                     captureTimeout = null
                     motor.power = -speed
-                } else if (currentSample == allianceColor || currentSample == SampleType.Shared) { // Good Sample
+                } else if (currentSample == allianceColor || (currentSample == SampleType.Shared && shared)) { // Good Sample
                     if (backTriggered) {
                         if (captureTimeout == null)
                             captureTimeout = Deadline(PARAMS.captureTimeout, TimeUnit.MILLISECONDS)
@@ -221,51 +185,11 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         }
     }
 
-    fun pickSampleBackward(): LoggableAction {
-        return object : LoggableAction {
-            var captureTimeout: Deadline? = null
-            override val name: String
-                get() = "PICKING_SAMPLE_${if (captureTimeout == null) "SEARCHING" else "WAITING"}"
-            var initialized = false
-            override fun run(p: TelemetryPacket): Boolean {
-                if (!initialized) {
-                    Logging.LOG("PICK_SAMPLE")
-                    initialized = true
-                }
-
-                val currentSample = sampleType
-                val allianceColor =
-                    if (PoseStorage.isRedAlliance) SampleType.Red else SampleType.Blue
-
-                if (!distanceTriggered) { // No Sample
-                    captureTimeout = null
-                    motor.power = speed
-                } else if (currentSample == allianceColor || currentSample == SampleType.Shared || backTriggered) { // Any Sample
-                    if (frontTriggered) {
-                        if (captureTimeout == null)
-                            captureTimeout = Deadline(PARAMS.captureTimeout, TimeUnit.MILLISECONDS)
-                        motor.power = 0.0
-                    } else if (motor.getCurrent(CurrentUnit.AMPS) < currentTrigger) {
-                        Logging.LOG("INTAKE_CURRENT", motor.getCurrent(CurrentUnit.AMPS))
-                        motor.power = currentTriggerSpeed
-                    } else {
-                        motor.power = speed / 4
-                    }
-                } else { // Bad Sample
-                    captureTimeout = null
-                    motor.power = 1.0
-                }
-
-                return captureTimeout?.hasExpired() != true && !PoseStorage.shouldHallucinate
-            }
-        }
-    }
-
     fun retractSlides(): LoggableAction {
         return Loggable(
             "RETRACT_FLIP_INTAKE", ParallelAction(
                 InstantAction { Logging.LOG("RETRACT_SLIDES") },
-                Timeout(slides.gotoDistance(0.0, 0.1), 1500.0),
+                slides.gotoDistance(0.0, 0.1),
                 SequentialAction(
                     InstantAction {
                         motor.power = 0.15
@@ -289,22 +213,16 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     fun transfer(): LoggableAction {
-        return object : LoggableAction {
-            var initialized = false
-
-            override val name: String
-                get() = "INTAKE_TRANSFER"
-
-            override fun run(p: TelemetryPacket): Boolean {
-                if (!initialized) {
-                    Logging.LOG("TRANSFER")
-                    motor.power = transferSpeed
-                    initialized = true
-                }
-
-                return frontTriggered
+        var initialized = false
+        return Loggable("INTAKE_TRANSFER", fun(p: TelemetryPacket): Boolean {
+            if (!initialized) {
+                Logging.LOG("TRANSFER")
+                motor.power = transferSpeed
+                initialized = true
             }
-        }
+
+            return frontTriggered
+        })
     }
 
     fun stopTransfer(): LoggableAction {
@@ -315,8 +233,11 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
     }
 
     @JvmOverloads
-    fun captureSample(forward: Boolean, close: Boolean = false): LoggableAction {
-        if (close) return LoggingSequential(
+    fun captureSample(
+        shared: Boolean,
+        positionProvider: Lift.DoubleProvider? = null
+    ): LoggableAction {
+        if (positionProvider?.run() == null) return LoggingSequential(
             "CAPTURE_CLOSE_SAMPLE",
 
             Loggable(
@@ -324,21 +245,30 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                     Loggable("FLIP_INTAKE_DOWN", flipServo.setPosition(true)),
                     pullServo.setSpeed(1.0),
                     slides.gotoDistance(1.0),
-                    if (forward) pickSampleForward() else pickSampleBackward(),
+                    pickSampleForward(shared),
                 )
             ),
             retractSlides(),
         )
+
+        val holdPositionAction = slides.holdVariablePosition(positionProvider)
+        val flipIntakeAction = flipServo.setPosition(true)
+        var flipComplete = false
 
         return LoggingSequential(
             "CAPTURE_FAR_SAMPLE",
             Loggable(
                 "SEARCH_AND_FIND", ParallelAction(
                     pullServo.setSpeed(1.0),
-                    extendSlides(),
-                    doWhile(
-                        if (forward) crawlForward() else crawlBackward(),
-                        if (forward) pickSampleForward() else pickSampleBackward()
+                    race(
+                        fun(p: TelemetryPacket): Boolean {
+                            if (!flipComplete && slides.currentPosition > minExtension) {
+                                flipComplete = !flipIntakeAction.run(p)
+                            }
+
+                            return holdPositionAction.run(p)
+                        },
+                        pickSampleForward(shared)
                     ),
                 )
             ),

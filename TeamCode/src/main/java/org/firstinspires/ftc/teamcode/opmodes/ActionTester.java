@@ -62,7 +62,7 @@ public class ActionTester extends LinearOpMode {
 
             if (action == null || !action.run(p)) {
                 action = new SequentialAction(
-                        intake.captureSample(true, true),
+                        intake.captureSample(true),
                         new race(intake.transfer(),
                                 new SleepAction(2)
                         ),
