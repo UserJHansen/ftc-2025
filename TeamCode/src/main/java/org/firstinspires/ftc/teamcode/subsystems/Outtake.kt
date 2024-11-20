@@ -7,6 +7,7 @@ import com.acmerobotics.roadrunner.ParallelAction
 import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
@@ -189,6 +190,12 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
     fun specimenReady(open: Boolean): LoggableAction {
         return LoggingSequential(
             "SPECIMEN_READY",
+            StaticLights.setColours(
+                arrayOf(
+                    RevBlinkinLedDriver.BlinkinPattern.WHITE,
+                    RevBlinkinLedDriver.BlinkinPattern.GREEN
+                )
+            ),
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("SPECIMEN_READY"))
             }),
@@ -301,6 +308,11 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     elbow.setPosition(0),
                 )
             ),
+            StaticLights.setColours(
+                arrayOf(
+                    RevBlinkinLedDriver.BlinkinPattern.BLACK
+                )
+            ),
         )
     }
 
@@ -323,6 +335,11 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     elbow.setPosition(0),
                 )
             ),
+            StaticLights.setColours(
+                arrayOf(
+                    RevBlinkinLedDriver.BlinkinPattern.BLACK
+                )
+            )
         )
     }
 
