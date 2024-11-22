@@ -128,8 +128,10 @@ class Lift @JvmOverloads constructor(
                         TimeUnit.SECONDS
                     )
                     liftMotor.targetPosition = (targetDistance * ticksPerInch).toInt()
-                    if (!lockedOut)
+                    if (!lockedOut) {
                         liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
+                        liftMotor.power = 1.0
+                    }
 
                     initialized = true
                 }
@@ -165,13 +167,16 @@ class Lift @JvmOverloads constructor(
                 if (!initialized) {
                     liftActionWriter.write(StringMessage("$lastName HOLD_USER_DISTANCE"))
                     liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION
+                    liftMotor.power = 1.0
                     initialized = true
                 }
 
                 liftPoseWriter.write(DoubleMessage(currentPosition))
 
                 if (!lockedOut) {
-                    liftMotor.targetPosition = (positionProvider.run() * ticksPerInch).toInt()
+                    val position = positionProvider.run()
+                    Logging.LOG("HOLDING_POSITION", position)
+                    liftMotor.targetPosition = (position * ticksPerInch).toInt()
                 }
 
                 return liftMotor.targetPosition != 0
@@ -188,14 +193,13 @@ class Lift @JvmOverloads constructor(
         return object : LoggableAction {
             val goingUp = distance - throughPoint > 0
             val activateThrough: Boolean
-                get() = (currentPosition < throughPoint) xor !goingUp
+                get() = (currentPosition < throughPoint) xor goingUp
 
             override val name: String
                 get() = "$lastName GO_TO_${distance}_THROUGH_${throughPoint}_${if (activateThrough) "ACTIVATED" else "MOVING"}"
 
             val gotoAction = gotoDistance(distance, tolerance)
             var throughCompleted = false
-            var toCompleted = false
 
             override fun run(p: TelemetryPacket): Boolean {
                 if (activateThrough && !throughCompleted) {
@@ -227,6 +231,8 @@ class Lift @JvmOverloads constructor(
         lastName = uniqueName
         Logging.DEBUG("$uniqueName LIFT_POSITION", liftMotor.currentPosition)
         Logging.DEBUG("$uniqueName LIFT_TARGET", liftMotor.targetPosition)
+        Logging.DEBUG("$uniqueName LIFT_MODE", liftMotor.mode)
+        Logging.DEBUG("$uniqueName LIFT_POWER", liftMotor.power)
         Logging.DEBUG("$uniqueName LIFT_CURRENT", liftMotor.getCurrent(CurrentUnit.AMPS))
     }
 }

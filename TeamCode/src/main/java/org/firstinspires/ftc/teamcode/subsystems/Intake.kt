@@ -35,7 +35,7 @@ import kotlin.math.max
 class Intake(hardwareMap: HardwareMap) : StateLoggable {
     companion object PARAMS {
         @JvmField // Forward intake power
-        var P_Intake: Double = 10.0
+        var P_Intake: Double = 15.0
 
         @JvmField // Speed while intaking, if it is flying past lower this number
         var speed = 0.8
@@ -53,7 +53,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         var currentTriggerSpeed = 0.4
 
         @JvmField
-        var minExtension = 5.0
+        var minExtension = 3.0
 
         @JvmField
         var maxExtension = 11.0
@@ -63,7 +63,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
             var downPosition = 0.36
 
             @JvmField
-            var upPosition = 0.04
+            var upPosition = 0.06
         }
 
         @JvmField
@@ -75,7 +75,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         "intakeSlides",
         DcMotorSimple.Direction.FORWARD,
         P_Intake,
-        85.935483871
+        68.47911742
     )
     val leftEndpoint = DigitalInput(hardwareMap, "intakeLeft")
     val rightEndpoint = DigitalInput(hardwareMap, "intakeRight")
@@ -193,6 +193,20 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         }
     }
 
+    fun cancelSlides(): LoggableAction {
+        return Loggable("CANCEL_INTAKE", ParallelAction(
+            slides.gotoDistance(0.0, 0.1),
+            pullServo.setSpeed(0.0),
+            flipServo.setPosition(false),
+            InstantAction {
+                motor.power = 0.0
+            },
+            StaticLights.setColours(arrayOf(
+                RevBlinkinLedDriver.BlinkinPattern.BLACK,
+            )),
+        ))
+    }
+
     fun retractSlides(): LoggableAction {
         return Loggable(
             "RETRACT_FLIP_INTAKE", ParallelAction(
@@ -226,6 +240,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
             if (!initialized) {
                 Logging.LOG("TRANSFER")
                 motor.power = transferSpeed
+                pullServo.setSpeed(1.0).run(p)
                 initialized = true
             }
 
@@ -237,6 +252,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         return Loggable("STOP_TRANSFER_MOTOR", InstantAction {
             Logging.LOG("STOP_TRANSFER")
             motor.power = 0.0
+            pullServo.servo.power = 0.0
         })
     }
 
@@ -260,7 +276,6 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                     pickSampleForward(shared),
                 )
             ),
-            retractSlides(),
         )
 
         val holdPositionAction = slides.holdVariablePosition(positionProvider)
@@ -288,7 +303,6 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
                     ),
                 )
             ),
-            retractSlides(),
         )
     }
 

@@ -8,6 +8,7 @@ import com.acmerobotics.roadrunner.SequentialAction
 import com.acmerobotics.roadrunner.SleepAction
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver
+import com.qualcomm.robotcore.hardware.DcMotor
 import com.qualcomm.robotcore.hardware.DcMotorSimple
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.teamcode.galahlib.StateLoggable
@@ -24,17 +25,17 @@ import org.firstinspires.ftc.teamcode.messages.StringMessage
 class Outtake(hardwareMap: HardwareMap) : StateLoggable {
     companion object PARAMS {
         @JvmField
-        var P_Outake = 10.0
+        var P_Outake = 20.0
 
         @JvmField
-        var SpecimenCurrentTrigger = 8.0
+        var SpecimenCurrentTrigger = 6.0
 
         class LiftPositions {
             @JvmField
             var topBasket = 27.0
 
             @JvmField
-            var topSpecimen = 12.5
+            var topSpecimen = 11.5
         }
 
         class GrabberLimits {
@@ -85,7 +86,10 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
         val wristLimits = WristLimits()
     }
 
-    val lift = Lift(hardwareMap, "outtakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Outake)
+    val lift = Lift(
+        hardwareMap, "outtakeSlides", DcMotorSimple.Direction.FORWARD, PARAMS.P_Outake,
+        68.47911742
+    )
     val endLimit = DigitalInput(hardwareMap, "outtakeLimit")
 
     val grabber = ServoMultiState(
@@ -129,6 +133,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                 InstantAction {
                     outtakeActionWriter.write(StringMessage("MOVE_ARM_TRANSFER"))
                 },
+                lift.gotoDistance(0.0),
                 grabber.setPosition(0),
                 wrist.setPosition(0),
                 elbow.setPosition(0),
@@ -199,7 +204,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("SPECIMEN_READY"))
             }),
-            lift.gotoDistance(4.0),
+            lift.gotoDistance(10.0),
             Loggable(
                 "MOVE_ARM_OUT", ParallelAction(
                     grabber.setPosition(1),
@@ -207,7 +212,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     wrist.setPosition(1)
                 )
             ),
-            lift.gotoDistance(2.0),
+            lift.gotoDistance(4.0),
             Loggable("MOVE_GRABBER_TO_POSITION", grabber.setPosition(if (open) 0 else 1))
         )
     }
@@ -255,7 +260,8 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             lift.gotoDistance(liftPositions.topSpecimen),
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("PLACE_SPECIMEN"))
-                lift.liftMotor.setPositionPIDFCoefficients(25.0)
+                lift.lockedOut = true
+                lift.liftMotor.power = 1.0
             }),
             Loggable(
                 "GRAB", ParallelAction(
@@ -263,11 +269,13 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     wrist.setPosition(4)
                 )
             ),
-            lift.gotoDistance(PARAMS.liftPositions.topSpecimen + 6, 0.25),
-            Loggable("WAIT_FOR_FINAL", SleepAction(0.5)),
+            lift.gotoDistance(PARAMS.liftPositions.topSpecimen + 8, 0.25),
             Loggable(
-                "PID_NORMAL",
-                InstantAction { lift.liftMotor.setPositionPIDFCoefficients(PARAMS.P_Outake) })
+                "POWER_OFF",
+                InstantAction {
+                    lift.liftMotor.mode = DcMotor.RunMode.RUN_TO_POSITION;
+                    lift.lockedOut = false
+                })
         )
     }
 
@@ -276,17 +284,24 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             override val name: String
                 get() = if (currentAction != null) currentAction!!.name else "SPECIMEN_PLACE"
             var currentAction: LoggableAction? = null;
+            var currentTriggered = false
             val currentTriggerAction = SequentialAction(
                 CurrentCutoff(lift.liftMotor).above(SpecimenCurrentTrigger),
                 CurrentCutoff(lift.liftMotor).below(SpecimenCurrentTrigger)
             )
 
             override fun run(p: TelemetryPacket): Boolean {
+                var complete = false
                 if (currentAction == null || !currentAction!!.run(p)) {
                     currentAction = placeSpecimen()
+                    complete = true
                 }
 
-                return currentTriggerAction.run(p)
+                if (!currentTriggered) {
+                    currentTriggered = !currentTriggerAction.run(p)
+                }
+
+                return !currentTriggered || !complete
             }
 
         }
@@ -296,6 +311,11 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
         return LoggingSequential(
             "RETURN_SPECIMEN",
             Loggable("LET_GO", grabber.setPosition(0)),
+            Loggable(
+                "UNLOCK_FROM_SPECIMEN",
+                InstantAction {
+                    lift.lockedOut = false
+                }),
             Loggable(
                 "MOVE_SAFE", ParallelAction(
                     elbow.setPosition(2),
@@ -322,7 +342,12 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             Loggable("LOG_ACTION", InstantAction {
                 outtakeActionWriter.write(StringMessage("ABORT_SPECIMEN"))
             }),
-            lift.gotoDistance(4.0),
+            Loggable(
+                "UNLOCK_FROM_SPECIMEN",
+                InstantAction {
+                    lift.lockedOut = false
+                }),
+            lift.gotoDistance(10.0),
             Loggable(
                 "MOVE_SAFE", ParallelAction(
                     elbow.setPosition(2),

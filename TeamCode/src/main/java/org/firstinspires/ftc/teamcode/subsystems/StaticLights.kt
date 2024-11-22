@@ -5,13 +5,14 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable
 import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
+import org.firstinspires.ftc.teamcode.staticData.Logging
 
 typealias Color = RevBlinkinLedDriver.BlinkinPattern
 
 class StaticLights {
     companion object {
         @JvmStatic
-        var colors: Array<Color> = arrayOf()
+        var colors: Array<Color> = arrayOf(RevBlinkinLedDriver.BlinkinPattern.BLACK)
 
         @JvmStatic
         var blinksPerSecond = 4
@@ -24,7 +25,7 @@ class StaticLights {
         }
 
         private var inSpecialState = false
-        private var specialStateColors: Array<Color> = arrayOf()
+        private var specialStateColors: Array<Color> = arrayOf(RevBlinkinLedDriver.BlinkinPattern.BLACK)
         private var specialStateBlinksPerSecond = 8
 
         @JvmStatic
@@ -38,13 +39,18 @@ class StaticLights {
 
         @JvmStatic
         fun update() {
-            val currentColors = if (inSpecialState) specialStateColors else colors
+            var currentColors = if (inSpecialState) specialStateColors else colors
             val currentBlinksPerSecond = if (inSpecialState) specialStateBlinksPerSecond else blinksPerSecond
 
+            if (currentColors.isEmpty()) {
+                currentColors = arrayOf(RevBlinkinLedDriver.BlinkinPattern.BLACK)
+            }
+
+
             val newColor =
-                currentColors[(
+                currentColors[((
                         System.currentTimeMillis() * currentBlinksPerSecond
-                                / 1_000_000).toInt() % currentColors.size]
+                                / 1_000).toLong() % currentColors.size).toInt()]
             if (lastColor != newColor) {
                 driver?.setPattern(newColor)
             }

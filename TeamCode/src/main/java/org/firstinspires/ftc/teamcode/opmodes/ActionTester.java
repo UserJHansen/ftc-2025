@@ -61,13 +61,14 @@ public class ActionTester extends LinearOpMode {
             driveBase.update(p);
 
             if (action == null || !action.run(p)) {
-                action = new SequentialAction(
-                        intake.captureSample(true),
-                        new race(intake.transfer(),
-                                new SleepAction(2)
-                        ),
-                        intake.stopTransfer()
-                );
+//                action = new SequentialAction(
+//                        intake.captureSample(true),
+//                        new race(intake.transfer(),
+//                                new SleepAction(2)
+//                        ),
+//                        intake.stopTransfer()
+//                );
+                action = outtake.getLift().gotoDistance(10);
 //                action = new SequentialAction(
 //                    outtake.readyForTransfer()
 //                );

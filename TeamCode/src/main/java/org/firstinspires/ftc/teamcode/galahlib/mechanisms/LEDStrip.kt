@@ -5,10 +5,13 @@ import com.acmerobotics.roadrunner.Action
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver
 import com.qualcomm.robotcore.hardware.HardwareMap
 import org.firstinspires.ftc.robotcore.internal.system.Deadline
+import org.firstinspires.ftc.teamcode.galahlib.actions.Loggable
+import org.firstinspires.ftc.teamcode.galahlib.actions.LoggableAction
+import org.firstinspires.ftc.teamcode.galahlib.actions.doWhile
 import java.util.concurrent.TimeUnit
 
-class LEDStrip(hardwareMap: HardwareMap) {
-    val driver: RevBlinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver::class.java, "blinkin")
+class LEDStrip(hardwareMap: HardwareMap, name: String) {
+    val driver: RevBlinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver::class.java, name)
 
     fun showPattern(
         colors: List<RevBlinkinLedDriver.BlinkinPattern>,
@@ -27,5 +30,16 @@ class LEDStrip(hardwareMap: HardwareMap) {
                 return true
             }
         }
+    }
+
+    fun showWhile(
+        colors: List<RevBlinkinLedDriver.BlinkinPattern>,
+        blinksPerSecond: Double,
+        action: LoggableAction
+    ): LoggableAction {
+        return doWhile(
+            Loggable("SHOW_PATTERN", showPattern(colors, blinksPerSecond)),
+            action
+        )
     }
 }
