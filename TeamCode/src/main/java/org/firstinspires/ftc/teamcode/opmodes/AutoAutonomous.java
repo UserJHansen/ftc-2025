@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
+import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
@@ -126,6 +127,14 @@ public class AutoAutonomous extends LinearOpMode {
 
         TrajectoryActionBuilder builder = driveBase.allianceActionBuilder(map.getStartPosition());
 
+        driveBase.localizer.setCurrentPose(PoseStorage.isRedAlliance
+                ? map.getStartPosition()
+                : new Pose2d(
+                -map.getStartPosition().position.x,
+                -map.getStartPosition().position.y,
+                map.getStartPosition().heading.plus(Math.PI).toDouble())
+        );
+
         ActionGenerator getCapture = () -> new LoggingSequential(
                 "INTAKE_CAPTURE",
                 new Timeout(new Loggable("WAIT_FOR_TRANSFER", new ParallelAction(
@@ -135,8 +144,6 @@ public class AutoAutonomous extends LinearOpMode {
                 intake.stopTransfer(),
                 outtake.pickupInternalSample()
         );
-
-        driveBase.localizer.setCurrentPose(map.getStartPosition());
 
         builder = builder.strafeTo(map.getSpecimenPosition().position)
                 .afterDisp(0, outtake.grabber(false))

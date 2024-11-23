@@ -192,6 +192,16 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
         lift.gotoDistance(0.0)
     )
 
+    fun specimenBack(): LoggableAction {
+        return Loggable(
+            "MOVE_ARM_OUT", ParallelAction(
+                grabber.setPosition(1),
+                elbow.setPosition(2),
+                wrist.setPosition(1)
+            )
+        )
+    }
+
     fun specimenReady(open: Boolean): LoggableAction {
         return LoggingSequential(
             "SPECIMEN_READY",
@@ -205,13 +215,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                 outtakeActionWriter.write(StringMessage("SPECIMEN_READY"))
             }),
             lift.gotoDistance(10.0),
-            Loggable(
-                "MOVE_ARM_OUT", ParallelAction(
-                    grabber.setPosition(1),
-                    elbow.setPosition(2),
-                    wrist.setPosition(1)
-                )
-            ),
+            specimenBack(),
             lift.gotoDistance(4.0),
             Loggable("MOVE_GRABBER_TO_POSITION", grabber.setPosition(if (open) 0 else 1))
         )
@@ -226,7 +230,8 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
         )
     }
 
-    fun raiseSpecimen(): LoggableAction {
+    @JvmOverloads
+    fun raiseSpecimen(loose: Boolean = true): LoggableAction {
         return LoggingSequential(
             "GRAB_SPECIMEN",
             Loggable("GRAB_SPECIMEN", InstantAction {
@@ -244,7 +249,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     ),
                     Loggable(
                         "GRAB_DROP", ParallelAction(
-                            grabber.setPosition(2),
+                            grabber.setPosition(if (loose) 2 else 1),
                             SleepAction(0.2),
                         )
                     ),
@@ -333,6 +338,29 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
                     RevBlinkinLedDriver.BlinkinPattern.BLACK
                 )
             ),
+        )
+    }
+
+
+    fun safeAutoReturnSpecimen(): LoggableAction {
+        return LoggingSequential(
+            "RETURN_SPECIMEN_SAFE",
+            Loggable(
+                "UNLOCK_FROM_SPECIMEN",
+                InstantAction {
+                    lift.lockedOut = false
+                }),
+            Loggable("LOOSE", grabber.setPosition(2)),
+            Loggable(
+                "MOVE_ARM_OUT", ParallelAction(
+                    grabber.setPosition(1),
+                    elbow.setPosition(2),
+                    wrist.setPosition(2)
+                )
+            ),
+            lift.gotoDistance(4.0),
+            Loggable("LET_GO", grabber.setPosition(0)),
+            abortSpecimen()
         )
     }
 

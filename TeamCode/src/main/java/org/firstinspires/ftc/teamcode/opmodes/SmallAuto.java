@@ -5,10 +5,10 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.SleepAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
@@ -20,6 +20,7 @@ import com.userjhansen.automap.Maps.Map;
 import com.userjhansen.automap.Maps.OutsideOne;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
+import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
 import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
@@ -61,6 +62,42 @@ public class SmallAuto extends LinearOpMode {
         return traj;
     }
 
+    public static TrajectoryActionBuilder addActionAfterFirst(TrajectoryActionBuilder traj, AutoPart[] parts, Action action) {
+        boolean addedFirst = false;
+        for (AutoPart part : parts) {
+            switch (part.type) {
+                case STRAFE:
+                    traj = traj.strafeTo(part.getPose().position);
+                    break;
+                case STRAFE_TO:
+                    traj = traj.strafeToLinearHeading(part.getPose().position, part.getPose().heading);
+                    break;
+                case TURN:
+                    traj = traj.turn(part.value);
+                    break;
+                case WAIT:
+                    traj = traj.waitSeconds(part.value);
+                    break;
+                case SPLINE_TO:
+                    traj = traj.splineToSplineHeading(part.getPose(), part.value);
+                    break;
+                case SPLINE_CONSTANT:
+                    traj = traj.splineToConstantHeading(part.getPose().position, part.value);
+                    break;
+                case ACTION:
+                    break;
+                case CHANGE_LIGHT:
+                    break;
+            }
+
+            if (!addedFirst) {
+                addedFirst = true;
+                traj = traj.afterTime(0.1, action);
+            }
+        }
+        return traj;
+    }
+
     @Override
     public void runOpMode() {
         MecanumDrive driveBase = new MecanumDrive(hardwareMap, PoseStorage.currentPose);
@@ -71,13 +108,18 @@ public class SmallAuto extends LinearOpMode {
 
         Action initAction = new ParallelAction(
                 intake.resetSlides(),
-                outtake.resetLifts(),
-                outtake.getElbow().setPosition(2),
-                outtake.getWrist().setManualLocation(0.25),
-                outtake.getGrabber().setPosition(1)
+                new SequentialAction(
+                        outtake.resetLifts(),
+                        outtake.getLift().gotoDistance(1.0),
+                        outtake.specimenBack(),
+                        outtake.grabber(true),
+                        new SleepAction(1),
+                        outtake.grabber(false)
+                )
         );
 
 //        Run initialisation tasks
+        outtake.unlock();
         TelemetryPacket p = new TelemetryPacket();
         while (!isStarted() && initAction.run(p)) {
             FtcDashboard.getInstance().sendTelemetryPacket(p);
@@ -89,23 +131,16 @@ public class SmallAuto extends LinearOpMode {
         outtake.lockout();
 
         boolean innerPosition = false;
-        boolean allianceOverride = false;
         while (!isStarted()) {
             p = new TelemetryPacket();
             driveBase.update(p);
-
-            if (!allianceOverride) {
-                PoseStorage.isRedAlliance = driveBase.localizer.currentPose.position.y < 0;
-            }
 
             if (gamepad1.a) innerPosition = true;
             else if (gamepad1.y) innerPosition = false;
 
             if (gamepad1.b) {
-                allianceOverride = true;
                 PoseStorage.isRedAlliance = true;
             } else if (gamepad1.x) {
-                allianceOverride = true;
                 PoseStorage.isRedAlliance = false;
 
             }
@@ -134,23 +169,21 @@ public class SmallAuto extends LinearOpMode {
         driveBase.localizer.setCurrentPose(PoseStorage.isRedAlliance
                 ? map.getStartPosition()
                 : new Pose2d(
-                map.getStartPosition().position.x,
+                -map.getStartPosition().position.x,
                 -map.getStartPosition().position.y,
-                map.getStartPosition().heading.inverse().toDouble())
-        );
+                map.getStartPosition().heading.plus(Math.PI).toDouble()));
 
-        builder = builder.stopAndAdd(outtake.grabber(false)).strafeTo(map.getSpecimenPosition().position)
-                .stopAndAdd(new SequentialAction(
-                        new InstantAction(() -> outtake.getLift().liftMotor.setPositionPIDFCoefficients(10.0)),
-                        outtake.getLift().gotoDistance(12),
-                        new InstantAction(() -> outtake.getLift().liftMotor.setPositionPIDFCoefficients(3)),
-                        outtake.getGrabber().setPosition(0),
-                        new ParallelAction(
-                                outtake.getElbow().setPosition(0),
-                                outtake.getWrist().setPosition(0)
+        builder = builder.strafeTo(map.getSpecimenPosition().position)
+                .stopAndAdd(
+                        new SequentialAction(
+                                outtake.raiseSpecimen(false),
+                                outtake.getWrist().setPosition(4),
+                                new Timeout(
+                                        outtake.ensureSpecimenPlaced(), 3
+                                ),
+                                outtake.safeAutoReturnSpecimen()
                         )
-                ))
-                .strafeTo(new Vector2d(0, -52)).afterDisp(2, outtake.getLift().gotoDistance(0.0));
+                ).strafeTo(new Vector2d(0, -52));
 
         builder = addParts(builder, map.getParkParts());
 
@@ -160,7 +193,7 @@ public class SmallAuto extends LinearOpMode {
             p = new TelemetryPacket();
 
             driveBase.update(p);
-            visionDetection.update(driveBase.localizer, p);
+//            visionDetection.update(driveBase.localizer, p);
             PoseStorage.currentPose = driveBase.localizer.currentPose;
 
             for (LynxModule module : allHubs) {

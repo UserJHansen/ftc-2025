@@ -73,14 +73,14 @@ public final class MecanumDrive implements StateLoggable {
 
         // feedforward parameters (in tick units)
         // First is the Forward, Second is the Lateral kV
-        public double kS = (2.0880871090673025 + 3.1) / 2;
-        public double kV = 0.00008494697400188092;
+        public double kS = 1.7403843796538885;
+        public double kV = 0.00008866044668882701;
         public double kA = 0.00002;
 
         // path profile parameters (in inches)
-        public double maxWheelVel = 50;
-        public double minProfileAccel = -30;
-        public double maxProfileAccel = 50;
+        public double maxWheelVel = 55.784526;
+        public double minProfileAccel = -40;
+        public double maxProfileAccel = 60;
 
         // turn profile parameters (in radians)
         public double maxAngVel = Math.PI; // shared with path
@@ -240,7 +240,7 @@ public final class MecanumDrive implements StateLoggable {
                 defaultVelConstraint, defaultAccelConstraint,
                 PoseStorage.isRedAlliance ? pose -> pose
                         : pose -> new Pose2dDual<>(
-                        pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse())
+                        pose.position.x.unaryMinus(), pose.position.y.unaryMinus(), pose.heading.plus(Math.PI))
         );
     }
 

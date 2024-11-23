@@ -108,7 +108,7 @@ public class MeepMeepVis {
                     .setDriveTrainType(DriveTrainType.MECANUM)
                     .setColorScheme(isRed ? new ColorSchemeRedDark() : new ColorSchemeBlueDark())
                     // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                    .setConstraints(39.4224324932042, 39.4224324932042, Math.toRadians(143.385), Math.toRadians(163.67673913043478), 12)
+                    .setConstraints(55.784526, 60, Math.toRadians(143.385), Math.toRadians(163.67673913043478), 12)
                     .build();
             bot.runAction(buildTrajectorySequence(bot.getDrive(), new InsideOne(), isRed));
             meepMeep.addEntity(bot);
