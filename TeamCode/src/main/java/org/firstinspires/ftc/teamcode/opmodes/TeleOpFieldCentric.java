@@ -16,6 +16,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 import org.firstinspires.ftc.teamcode.MecanumDrive;
@@ -39,6 +40,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
     public static double SlowmodeSpeed = 0.4;
     public static double SlowmodeTurning = 0.5;
     public static double TriggerMin = 0.01;
+    public static double climbUpSpeed = 0.5;
 
     @SuppressLint("DefaultLocale")
     @Override
@@ -47,6 +49,7 @@ public class TeleOpFieldCentric extends LinearOpMode {
         VisionDetection visionDetection = new VisionDetection(hardwareMap);
         Intake intake = new Intake(hardwareMap);
         Outtake outtake = new Outtake(hardwareMap);
+        DcMotorEx climbMotor = hardwareMap.get(DcMotorEx.class, "climb");
         StaticLights.setup(hardwareMap, "blinkin");
 
         Button fieldMode = new Button();
@@ -60,20 +63,6 @@ public class TeleOpFieldCentric extends LinearOpMode {
         Logging.telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         TelemetryPacket p;
-        if (Logging.DEBUG) {
-            Action initAction = new ParallelAction(
-                    intake.resetSlides(),
-                    outtake.resetLifts()
-            );
-//        Run initialisation tasks
-            p = new TelemetryPacket();
-            while (!isStarted() && initAction.run(p)) {
-                FtcDashboard.getInstance().sendTelemetryPacket(p);
-                p = new TelemetryPacket();
-                Logging.update();
-                StaticLights.update();
-            }
-        }
 
         intake.lockout();
         outtake.lockout();
@@ -102,7 +91,11 @@ public class TeleOpFieldCentric extends LinearOpMode {
         }
 
         LoggableAction sampleAction = null;
-        LoggableAction finishingAction = outtake.homePosition();
+        LoggableAction finishingAction = new Loggable("INIT", new ParallelAction(
+                outtake.homePosition(),
+                intake.resetSlides(),
+                outtake.resetLifts()
+        ));
         boolean specimenGrabbed = false;
         SampleState sampleState = SampleState.Waiting;
         CapturingState captureState = CapturingState.None;
@@ -159,6 +152,14 @@ public class TeleOpFieldCentric extends LinearOpMode {
             }
 
             driveBase.update(p);
+
+            if ((PoseStorage.splitControls ? gamepad2 : gamepad1).dpad_up) {
+                climbMotor.setPower(climbUpSpeed);
+            } else if ((PoseStorage.splitControls ? gamepad2 : gamepad1).dpad_down) {
+                climbMotor.setPower(-1.0);
+            } else {
+                climbMotor.setPower(0);
+            }
 
             Pose2d poseEstimate = driveBase.localizer.currentPose;
             input = input.times(slowMode.val ? SlowmodeSpeed : 1);

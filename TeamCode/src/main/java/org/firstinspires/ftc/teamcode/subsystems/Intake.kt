@@ -56,11 +56,11 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         var minExtension = 3.0
 
         @JvmField
-        var maxExtension = 11.0
+        var maxExtension = 20.0
 
         class FlipLimits {
             @JvmField
-            var downPosition = 0.36
+            var downPosition = 0.30
 
             @JvmField
             var upPosition = 0.06
