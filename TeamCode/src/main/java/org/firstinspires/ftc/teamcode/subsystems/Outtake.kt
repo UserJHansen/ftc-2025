@@ -57,7 +57,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var deposit = 1.0
 
             @JvmField
-            var specimen = 0.57
+            var specimen = 0.59
 
             @JvmField
             var specimenOtherSide = 0.235

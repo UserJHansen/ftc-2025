@@ -44,7 +44,7 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         var transferSpeed = 0.8
 
         @JvmField
-        var captureTimeout = 250L
+        var captureTimeout = 50L
 
         @JvmField
         var currentTrigger = 2.0
@@ -60,10 +60,10 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
 
         class FlipLimits {
             @JvmField
-            var downPosition = 0.30
+            var downPosition = 0.28
 
             @JvmField
-            var upPosition = 0.06
+            var upPosition = 0.00
         }
 
         @JvmField
