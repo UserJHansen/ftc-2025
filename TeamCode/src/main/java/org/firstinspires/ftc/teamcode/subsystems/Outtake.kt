@@ -65,7 +65,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
 
         class WristLimits {
             @JvmField
-            var intake = 0.78
+            var intake = 0.773
 
             @JvmField
             var specimen = 0.48
