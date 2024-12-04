@@ -15,12 +15,11 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.userjhansen.automap.AutoPart;
-import com.userjhansen.automap.Maps.InsideOne;
+import com.userjhansen.automap.Maps.InsideOneSample;
 import com.userjhansen.automap.Maps.Map;
-import com.userjhansen.automap.Maps.OutsideOne;
+import com.userjhansen.automap.Maps.OutsideOneSample;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
 import org.firstinspires.ftc.teamcode.localization.VisionDetection;
 import org.firstinspires.ftc.teamcode.staticData.Logging;
 import org.firstinspires.ftc.teamcode.staticData.PoseStorage;
@@ -29,9 +28,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Outtake;
 
 import java.util.List;
 
-@Autonomous(name = "Small Auto")
+@Autonomous(name = "High Sample Auto")
 @Config
-public class SmallAuto extends LinearOpMode {
+public class HighSampleAuto extends LinearOpMode {
     public static TrajectoryActionBuilder addParts(TrajectoryActionBuilder traj, AutoPart[] parts) {
         for (AutoPart part : parts) {
             switch (part.type) {
@@ -42,7 +41,7 @@ public class SmallAuto extends LinearOpMode {
                     traj = traj.strafeToLinearHeading(part.getPose().position, part.getPose().heading);
                     break;
                 case TURN:
-                    traj = traj.turn(part.value+0.00001);
+                    traj = traj.turn(part.value);
                     break;
                 case WAIT:
                     traj = traj.waitSeconds(part.value);
@@ -162,7 +161,7 @@ public class SmallAuto extends LinearOpMode {
         intake.unlock();
         outtake.unlock();
 
-        Map map = innerPosition ? new InsideOne() : new OutsideOne();
+        Map map = innerPosition ? new InsideOneSample() : new OutsideOneSample();
 
         TrajectoryActionBuilder builder = driveBase.allianceActionBuilder(map.getStartPosition());
 
@@ -173,31 +172,64 @@ public class SmallAuto extends LinearOpMode {
                 -map.getStartPosition().position.y,
                 map.getStartPosition().heading.plus(Math.PI).toDouble()));
 
-        builder = builder.strafeTo(map.getSpecimenPosition().position)
+        builder = builder.strafeTo(map.getHighBasketPosition2().position)
                 .stopAndAdd(
                         new SequentialAction(
-                                outtake.raiseSpecimen(false),
-//                                outtake.getWrist().setPosition(4),
-                                new Timeout(
-                                        outtake.ensureSpecimenPlaced(), 3
-                                ),
-                                outtake.safeAutoReturnSpecimen()
+                                outtake.topBasket()
                         )
-                ).strafeTo(new Vector2d(0, -52));
+                );
+
+        builder = builder.strafeTo(map.getHighBasketPosition().position)
+                .stopAndAdd(
+                        new SequentialAction(
+                                outtake.dropSample()
+                        )
+                );
+
+//        builder = addParts(builder, map.getSpecimenParts());
+//
+        builder = builder.strafeTo(map.getHighBasketPosition2().position)
+                .stopAndAdd(
+                        new SequentialAction(
+                                outtake.retractArm(),
+                                outtake.homePosition()
+                        )
+                );
 
         builder = addParts(builder, map.getParkParts());
-
-        Action autonomous = builder.build();
-
-//        builder = builder.strafeTo(map.getCollectPosition().position)
+//
+//        builder = builder.strafeTo(map.getSampleCollectPosition().position)
 //                .stopAndAdd(
 //                        new SequentialAction(
-//                                outtake.specimenReady(true)
+//                                intake.retractSlides(),
+//                                intake.transfer(),
+//                                outtake.pickupInternalSample()
 //                        )
-//                ).strafeTo(new Vector2d(42.0, -60.0));
+//                ).strafeTo(new Vector2d(0, -52));
+//
+//        builder = addParts(builder, map.getDepositParts());
+//
+//        builder = builder.strafeTo(map.getHighBasketPosition().position)
+//                .stopAndAdd(
+//                        new SequentialAction(
+//                                outtake.topBasket(),
+//                                outtake.dropSample()
+//                        )
+//                ).strafeTo(new Vector2d(0, -52));
 //
 //        builder = addParts(builder, map.getSpecimenParts());
+//
+//        builder = builder.strafeTo(map.getParkPosition().position)
+//                .stopAndAdd(
+//                        new SequentialAction(
+//                                outtake.retractArm(),
+//                                outtake.homePosition()
+//                        )
+//                ).strafeTo(new Vector2d(0, -52));
+//
+//        builder = addParts(builder, map.getParkParts());
 
+        Action autonomous = builder.build();
 
 
         while (opModeIsActive() && !isStopRequested() && autonomous.run(p)) {

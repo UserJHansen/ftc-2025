@@ -17,7 +17,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.userjhansen.automap.AutoPart;
 import com.userjhansen.automap.Maps.InsideOne;
 import com.userjhansen.automap.Maps.Map;
-import com.userjhansen.automap.Maps.OutsideOne;
+import com.userjhansen.automap.Maps.OutsideOneForDoubleSpecimen;
 
 import org.firstinspires.ftc.teamcode.MecanumDrive;
 import org.firstinspires.ftc.teamcode.galahlib.actions.Timeout;
@@ -29,9 +29,9 @@ import org.firstinspires.ftc.teamcode.subsystems.Outtake;
 
 import java.util.List;
 
-@Autonomous(name = "Small Auto")
+@Autonomous(name = "Double Specimen Auto")
 @Config
-public class SmallAuto extends LinearOpMode {
+public class DoubleSpecimenAuto extends LinearOpMode {
     public static TrajectoryActionBuilder addParts(TrajectoryActionBuilder traj, AutoPart[] parts) {
         for (AutoPart part : parts) {
             switch (part.type) {
@@ -162,7 +162,7 @@ public class SmallAuto extends LinearOpMode {
         intake.unlock();
         outtake.unlock();
 
-        Map map = innerPosition ? new InsideOne() : new OutsideOne();
+        Map map = innerPosition ? new InsideOne() : new OutsideOneForDoubleSpecimen();
 
         TrajectoryActionBuilder builder = driveBase.allianceActionBuilder(map.getStartPosition());
 
@@ -176,7 +176,7 @@ public class SmallAuto extends LinearOpMode {
         builder = builder.strafeTo(map.getSpecimenPosition().position)
                 .stopAndAdd(
                         new SequentialAction(
-                                outtake.raiseSpecimen(false),
+                                outtake.raiseSpecimen(true),
 //                                outtake.getWrist().setPosition(4),
                                 new Timeout(
                                         outtake.ensureSpecimenPlaced(), 3
@@ -187,18 +187,33 @@ public class SmallAuto extends LinearOpMode {
 
         builder = addParts(builder, map.getParkParts());
 
+        builder = builder.strafeTo(map.getCollectPosition().position)
+                .stopAndAdd(
+                        new SequentialAction(
+                                outtake.specimenReady(true),
+                                new SleepAction(0.5),
+                                outtake.grabber(false),
+                                outtake.getLift().gotoDistance(10.0),
+                                outtake.raiseSpecimen(true)
+                        )
+                ).strafeTo(new Vector2d(0, -52));
+
+        builder = addParts(builder, map.getDepositParts());
+
+        builder = builder.strafeTo(map.getSpecimenPosition2().position)
+                .stopAndAdd(
+                        new SequentialAction(
+//                                outtake.getWrist().setPosition(4),
+                                new Timeout(
+                                        outtake.ensureSpecimenPlaced(), 3
+                                ),
+                                outtake.safeAutoReturnSpecimen()
+                        )
+                ).strafeTo(new Vector2d(0, -52));
+
+        builder = addParts(builder, map.getSpecimenParts());
+
         Action autonomous = builder.build();
-
-//        builder = builder.strafeTo(map.getCollectPosition().position)
-//                .stopAndAdd(
-//                        new SequentialAction(
-//                                outtake.specimenReady(true)
-//                        )
-//                ).strafeTo(new Vector2d(42.0, -60.0));
-//
-//        builder = addParts(builder, map.getSpecimenParts());
-
-
 
         while (opModeIsActive() && !isStopRequested() && autonomous.run(p)) {
             p = new TelemetryPacket();

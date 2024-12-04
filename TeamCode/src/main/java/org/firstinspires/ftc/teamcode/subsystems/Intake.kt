@@ -35,16 +35,16 @@ import kotlin.math.max
 class Intake(hardwareMap: HardwareMap) : StateLoggable {
     companion object PARAMS {
         @JvmField // Forward intake power
-        var P_Intake: Double = 15.0
+        var P_Intake: Double = 12.0
 
         @JvmField // Speed while intaking, if it is flying past lower this number
-        var speed = 0.8
+        var speed = 1.0
 
         @JvmField
-        var transferSpeed = 0.8
+        var transferSpeed = 1.0
 
         @JvmField
-        var captureTimeout = 250L
+        var captureTimeout = 100L
 
         @JvmField
         var currentTrigger = 2.0
@@ -60,10 +60,10 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
 
         class FlipLimits {
             @JvmField
-            var downPosition = 0.30
+            var downPosition = 0.29
 
             @JvmField
-            var upPosition = 0.06
+            var upPosition = 0.00
         }
 
         @JvmField

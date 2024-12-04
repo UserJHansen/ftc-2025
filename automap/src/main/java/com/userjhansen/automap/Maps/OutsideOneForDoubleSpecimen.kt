@@ -4,7 +4,8 @@ import com.acmerobotics.roadrunner.Pose2d
 import com.userjhansen.automap.AutoPart
 import com.userjhansen.automap.PartType
 
-class OutsideOne : Map {
+
+class OutsideOneForDoubleSpecimen : Map {
     override val startPosition = Pose2d(15.0, -62.0, Math.PI / 2)
 
     override val specimenPosition = Pose2d(2.0, -30.0, Math.PI / 2)
@@ -16,6 +17,7 @@ class OutsideOne : Map {
     override val highBasketPosition = Pose2d(-65.0, -47.0, Math.toRadians(315.0))
     override val highBasketPosition2 = Pose2d(-65.0, -50.0, Math.toRadians(315.0))
     override val sampleCollectPosition = Pose2d(-49.0, -30.5, Math.PI / 2)
+
 
     override val intakeParts = arrayOf(
         arrayOf(
@@ -31,31 +33,18 @@ class OutsideOne : Map {
         ),
     )
     override val depositParts = arrayOf(
-        AutoPart(PartType.STRAFE, Pose2d(0.0, -50.0, 0.0)),
-        AutoPart(PartType.SPLINE_TO, depositPosition, Math.PI),
+//        AutoPart(PartType.STRAFE, Pose2d(0.0, -50.0, 0.0)),
+        AutoPart(PartType.STRAFE_TO, specimenPosition2),
     )
+//  Then got to specimen collect position, collect specimen, then repeat this previous action
+
 
     override val parkParts = arrayOf(
-//        Do this if you want to keep normal Auto but set up for specimen first thing in Teleop
-//        Sample 1 Closest to submersible
-        AutoPart(PartType.STRAFE_TO, Pose2d(38.0, -39.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(38.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(45.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(45.0, -60.0, 0.0)),
-//        Sample 2 Middle
-        AutoPart(PartType.STRAFE_TO, Pose2d(45.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(57.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(57.0, -60.0, 0.0)),
-//        Sample 3 Closest to Field Wall
-        AutoPart(PartType.STRAFE_TO, Pose2d(57.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(65.0, -10.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(65.0, -60.0, 0.0)),
-        AutoPart(PartType.STRAFE_TO, Pose2d(42.0, -59.0, Math.PI / 2))
+        AutoPart(PartType.STRAFE_TO, Pose2d(42.0, -62.0, Math.PI / 2)),
+        AutoPart(PartType.STRAFE_TO, collectPosition)
     )
-
-        override val specimenParts = arrayOf(
+    override val specimenParts = arrayOf(
 //        Specimen Collecting
-            AutoPart(PartType.STRAFE_TO, Pose2d(42.0, -60.0, Math.PI / 2)),
-
+        AutoPart(PartType.STRAFE_TO, Pose2d(42.0, -60.0, Math.PI / 2)),
     )
 }

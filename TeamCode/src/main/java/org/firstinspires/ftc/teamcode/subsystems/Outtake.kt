@@ -35,7 +35,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var topBasket = 27.0
 
             @JvmField
-            var topSpecimen = 11.5
+            var topSpecimen = 12.5
         }
 
         class GrabberLimits {
@@ -57,7 +57,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var deposit = 1.0
 
             @JvmField
-            var specimen = 0.57
+            var specimen = 0.59
 
             @JvmField
             var specimenOtherSide = 0.235
@@ -65,7 +65,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
 
         class WristLimits {
             @JvmField
-            var intake = 0.78
+            var intake = 0.773
 
             @JvmField
             var specimen = 0.48
