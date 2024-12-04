@@ -178,15 +178,41 @@ public class DoubleSpecimenAuto extends LinearOpMode {
                 .stopAndAdd(
                         new SequentialAction(
                                 outtake.raiseSpecimen(false),
-                                outtake.getWrist().setPosition(4),
+//                                outtake.getWrist().setPosition(4),
                                 new Timeout(
                                         outtake.ensureSpecimenPlaced(), 3
                                 ),
-                                outtake.safeAutoReturnSpecimen()
+                                outtake.returnSpecimen()
                         )
                 ).strafeTo(new Vector2d(0, -52));
 
         builder = addParts(builder, map.getParkParts());
+
+        builder = builder.strafeTo(map.getCollectPosition().position);
+                builder.stopAndAdd(
+                        new SequentialAction(
+                                outtake.specimenReady(true),
+                                new SleepAction(0.5),
+                                outtake.grabber(false),
+                                outtake.getLift().gotoDistance(10.0)
+                        )
+                ).strafeTo(new Vector2d(0, -52));
+
+        builder = addParts(builder, map.getDepositParts());
+
+        builder = builder.strafeTo(map.getSpecimenPosition2().position)
+                .stopAndAdd(
+                        new SequentialAction(
+                                outtake.raiseSpecimen(false),
+//                                outtake.getWrist().setPosition(4),
+                                new Timeout(
+                                        outtake.ensureSpecimenPlaced(), 3
+                                ),
+                                outtake.returnSpecimen()
+                        )
+                ).strafeTo(new Vector2d(0, -52));
+
+        builder = addParts(builder, map.getSpecimenParts());
 
         Action autonomous = builder.build();
 

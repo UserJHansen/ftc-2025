@@ -42,7 +42,7 @@ public class SmallAuto extends LinearOpMode {
                     traj = traj.strafeToLinearHeading(part.getPose().position, part.getPose().heading);
                     break;
                 case TURN:
-                    traj = traj.turn(part.value);
+                    traj = traj.turn(part.value+0.00001);
                     break;
                 case WAIT:
                     traj = traj.waitSeconds(part.value);
@@ -177,7 +177,7 @@ public class SmallAuto extends LinearOpMode {
                 .stopAndAdd(
                         new SequentialAction(
                                 outtake.raiseSpecimen(false),
-                                outtake.getWrist().setPosition(4),
+//                                outtake.getWrist().setPosition(4),
                                 new Timeout(
                                         outtake.ensureSpecimenPlaced(), 3
                                 ),
@@ -188,6 +188,17 @@ public class SmallAuto extends LinearOpMode {
         builder = addParts(builder, map.getParkParts());
 
         Action autonomous = builder.build();
+
+//        builder = builder.strafeTo(map.getCollectPosition().position)
+//                .stopAndAdd(
+//                        new SequentialAction(
+//                                outtake.specimenReady(true)
+//                        )
+//                ).strafeTo(new Vector2d(42.0, -60.0));
+//
+//        builder = addParts(builder, map.getSpecimenParts());
+
+
 
         while (opModeIsActive() && !isStopRequested() && autonomous.run(p)) {
             p = new TelemetryPacket();
