@@ -35,7 +35,7 @@ class Outtake(hardwareMap: HardwareMap) : StateLoggable {
             var topBasket = 27.0
 
             @JvmField
-            var topSpecimen = 11.5
+            var topSpecimen = 12.5
         }
 
         class GrabberLimits {

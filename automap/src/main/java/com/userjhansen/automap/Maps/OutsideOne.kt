@@ -11,6 +11,11 @@ class OutsideOne : Map {
     override val specimenPosition2 = Pose2d(1.0, -29.0, Math.PI / 2)
     override val depositPosition = Pose2d(-46.0, -58.0, Math.PI / 16)
     override val collectPosition = Pose2d(42.0, -60.0, Math.PI / 2)
+    override val parkPosition = Pose2d(42.0, -61.0, Math.PI / 2)
+
+    override val highBasketPosition = Pose2d(-65.0, -47.0, Math.toRadians(315.0))
+    override val highBasketPosition2 = Pose2d(-65.0, -50.0, Math.toRadians(315.0))
+    override val sampleCollectPosition = Pose2d(-49.0, -30.5, Math.PI / 2)
 
     override val intakeParts = arrayOf(
         arrayOf(

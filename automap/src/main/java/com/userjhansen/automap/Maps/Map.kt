@@ -5,6 +5,10 @@ import com.userjhansen.automap.AutoPart
 
 interface Map {
 
+    val highBasketPosition2: Pose2d
+    val parkPosition: Pose2d
+    val highBasketPosition: Pose2d
+    val sampleCollectPosition: Pose2d
     val specimenPosition2: Pose2d
     val collectPosition: Pose2d
     val startPosition: Pose2d

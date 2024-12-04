@@ -38,13 +38,13 @@ class Intake(hardwareMap: HardwareMap) : StateLoggable {
         var P_Intake: Double = 12.0
 
         @JvmField // Speed while intaking, if it is flying past lower this number
-        var speed = 0.6
+        var speed = 1.0
 
         @JvmField
         var transferSpeed = 1.0
 
         @JvmField
-        var captureTimeout = 2L
+        var captureTimeout = 100L
 
         @JvmField
         var currentTrigger = 2.0
